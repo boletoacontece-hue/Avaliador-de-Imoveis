@@ -8,7 +8,7 @@ import FotoSlot from "./FotoSlot";
 import LazyMap from "../LazyMap";
 import { lerComparativos } from "./importarJson";
 import { geocodificar } from "../../lib/enderecos";
-import { fmtM2, precoM2, montarEndereco } from "../../lib/format";
+import { brl, fmtM2, precoM2, mediana, montarEndereco } from "../../lib/format";
 
 const PORTAIS = ["DFImóveis", "ZAP Imóveis", "Viva Real", "OLX", "Chaves na Mão", "Imovelweb", "Wimóveis", "Site de imobiliária", "Indicação"];
 
@@ -97,7 +97,7 @@ export default function TabComparativos({ f, comps, vendidas, acoes }) {
     e.target.value = "";
     if (!file) return;
     setErroImport("");
-    try { setImportacao(lerComparativos(await file.text(), file.name)); }
+    try { setImportacao(lerComparativos(await file.text(), file.name, comps.map((c) => c.source_url))); }
     catch (err) { setErroImport(err.message); }
   }
 
@@ -172,27 +172,73 @@ export default function TabComparativos({ f, comps, vendidas, acoes }) {
       </section>
 
       {importacao && (
-        <Modal titulo="Importar amostras" onFechar={() => setImportacao(null)}>
-          <p style={{ margin: "6px 0 12px" }}>
-            <b className="num">{importacao.validos.length}</b> de <span className="num">{importacao.total}</span> imóveis prontos para importar.
-          </p>
-          {importacao.erros.length > 0 && (
-            <div className="aviso aviso-ambar" style={{ maxHeight: 180, overflow: "auto" }}>
-              <b>Serão ignorados:</b>
-              <ul style={{ margin: "6px 0 0", paddingLeft: 18 }}>
-                {importacao.erros.map((e) => <li key={e.linha}>Item {e.linha}{e.endereco ? ` (${e.endereco})` : ""}: {e.msg}</li>)}
-              </ul>
-            </div>
-          )}
-          <div className="rodape-modal">
-            <button className="btn btn-sec" onClick={() => setImportacao(null)}>Cancelar</button>
-            <button className="btn" disabled={!importacao.validos.length}
-              onClick={async () => { await acoes.importar(importacao.validos); setImportacao(null); }}>
-              Importar {importacao.validos.length}
-            </button>
-          </div>
-        </Modal>
+        <SelecaoImportacao importacao={importacao} tipo={tipo} onFechar={() => setImportacao(null)}
+          onImportar={async (itens) => { await acoes.importar(itens); setImportacao(null); }} />
       )}
     </>
+  );
+}
+
+// Escolha das amostras a importar: o coletor traz dezenas de anúncios, a apresentação usa poucos.
+// Repetidos, fora da curva e já existentes vêm desmarcados, com o motivo ao lado.
+function SelecaoImportacao({ importacao, tipo, onFechar, onImportar }) {
+  const itens = importacao.validos;
+  const [marcados, setMarcados] = useState(() => new Set(itens.map((it, i) => (it.alerta ? null : i)).filter((i) => i !== null)));
+  const [importando, setImportando] = useState(false);
+  const alternar = (i) => setMarcados((m) => { const n = new Set(m); n.has(i) ? n.delete(i) : n.add(i); return n; });
+  const escolhidos = [...marcados].sort((a, b) => a - b).map((i) => itens[i]);
+  const mdn = mediana(escolhidos.map((c) => precoM2(c.price, c.area)));
+  const nAlertas = itens.filter((it) => it.alerta).length;
+
+  return (
+    <Modal titulo="Escolher amostras para importar" onFechar={onFechar} largo>
+      <p className="dica" style={{ margin: "6px 0 10px" }}>
+        <b className="num">{itens.length}</b> anúncios lidos{nAlertas ? <>, <b className="num">{nAlertas}</b> desmarcados para conferência</> : ""}.
+        Para a apresentação, fique com as <b>5 a 10</b> mais parecidas com o imóvel avaliado.
+      </p>
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 10 }}>
+        <button type="button" className="btn btn-sec btn-sm" onClick={() => setMarcados(new Set(itens.map((it, i) => (it.alerta ? null : i)).filter((i) => i !== null)))}>Marcar os sem alerta</button>
+        <button type="button" className="btn btn-sec btn-sm" onClick={() => setMarcados(new Set())}>Desmarcar todos</button>
+      </div>
+      <div className="selecao-lista">
+        <table className="tabela">
+          <thead><tr><th /><th>Amostra</th><th className="num">{tipo === "aluguel" ? "Aluguel" : "Preço"}</th><th className="num">Área</th><th className="num">R$/m²</th></tr></thead>
+          <tbody>
+            {itens.map((it, i) => (
+              <tr key={i} className={marcados.has(i) ? "sel" : ""} onClick={() => alternar(i)}>
+                <td><input type="checkbox" checked={marcados.has(i)} onChange={() => alternar(i)} onClick={(e) => e.stopPropagation()} aria-label={`Importar ${it.address || `item ${i + 1}`}`} /></td>
+                <td>
+                  <b>{it.address || "Endereço não informado"}</b>
+                  <small className="dica" style={{ display: "block" }}>{it.source_name}{it.source_url && <> · <a href={it.source_url} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()}>ver anúncio</a></>}</small>
+                  {it.alerta && <small className="alerta-linha">⚠ {it.alerta}</small>}
+                </td>
+                <td className="num">{brl(it.price)}</td>
+                <td className="num">{it.area ? `${Number(it.area).toLocaleString("pt-BR")} m²` : "—"}</td>
+                <td className="num">{fmtM2(precoM2(it.price, it.area), tipo)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      {importacao.erros.length > 0 && (
+        <details className="dica" style={{ marginTop: 10 }}>
+          <summary>{importacao.erros.length} itens do arquivo foram ignorados (sem preço ou área)</summary>
+          <ul style={{ margin: "6px 0 0", paddingLeft: 18 }}>
+            {importacao.erros.map((e) => <li key={e.linha}>Item {e.linha}{e.endereco ? ` (${e.endereco})` : ""}: {e.msg}</li>)}
+          </ul>
+        </details>
+      )}
+      <div className="rodape-modal" style={{ alignItems: "center" }}>
+        <span className="dica" style={{ marginRight: "auto" }}>
+          {escolhidos.length} selecionadas{mdn ? <> · mediana <b className="num">{fmtM2(mdn, tipo)}</b></> : ""}
+          {escolhidos.length > 12 && " · muitas amostras deixam a apresentação cansativa"}
+        </span>
+        <button className="btn btn-sec" onClick={onFechar}>Cancelar</button>
+        <button className="btn" disabled={!escolhidos.length || importando}
+          onClick={async () => { setImportando(true); await onImportar(escolhidos.map(({ alerta, ...c }) => c)); }}>
+          {importando ? "Importando…" : `Importar ${escolhidos.length}`}
+        </button>
+      </div>
+    </Modal>
   );
 }

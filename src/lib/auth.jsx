@@ -7,12 +7,15 @@ export const useAuth = () => useContext(AuthCtx);
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [acesso, setAcesso] = useState({ membro: false, gestor: false });
+  const [erroAcesso, setErroAcesso] = useState("");
   const [loading, setLoading] = useState(true);
 
   const carregarAcesso = useCallback(async (u) => {
-    if (!u) { setAcesso({ membro: false, gestor: false }); return; }
+    if (!u) { setAcesso({ membro: false, gestor: false }); setErroAcesso(""); return; }
     const { data, error } = await supabase.rpc("meu_acesso");
     setAcesso(error || !data ? { membro: false, gestor: false } : data);
+    // erro de configuração (migration não rodada, schema não exposto) ≠ "aguardando liberação"
+    setErroAcesso(error ? `${error.code ? `${error.code}: ` : ""}${error.message}` : "");
   }, []);
 
   useEffect(() => {
@@ -33,11 +36,15 @@ export function AuthProvider({ children }) {
 
   const value = {
     user, loading, supabaseReady,
-    membro: acesso.membro, gestor: acesso.gestor,
+    membro: acesso.membro, gestor: acesso.gestor, erroAcesso,
     recarregarAcesso: () => carregarAcesso(user),
     entrar: (email, senha) => supabase.auth.signInWithPassword({ email: email.trim(), password: senha }),
     criarConta: (nome, email, senha) =>
-      supabase.auth.signUp({ email: email.trim(), password: senha, options: { data: { nome } } }),
+      supabase.auth.signUp({
+        email: email.trim(), password: senha,
+        // o link do e-mail de confirmação volta para o Avaliador, e não para o Site URL do projeto (Vistoria)
+        options: { data: { nome }, emailRedirectTo: `${window.location.origin}${import.meta.env.BASE_URL}` },
+      }),
     sair: () => supabase.auth.signOut(),
   };
   return <AuthCtx.Provider value={value}>{children}</AuthCtx.Provider>;

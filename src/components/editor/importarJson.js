@@ -17,6 +17,7 @@ const MAPA = {
   anunciante: ["anunciante", "advertiser"],
   condominio: ["condominio", "condomínio"],
   iptu: ["iptu"],
+  alerta: ["alerta"],
   latitude: ["latitude", "lat"],
   longitude: ["longitude", "lng", "lon"],
 };
@@ -64,7 +65,37 @@ function lerCsv(texto) {
 
 const moeda = (v) => `R$ ${Math.round(v).toLocaleString("pt-BR")}`;
 
-export function lerComparativos(texto, nomeArquivo = "") {
+// Marca (sem apagar) o que o corretor deve conferir antes de importar:
+// link já existente na avaliação, repetido no próprio arquivo e preço/m² fora da curva.
+function marcarAlertas(itens, urlsExistentes) {
+  const jaTem = new Set((urlsExistentes || []).filter(Boolean).map((u) => u.split("?")[0]));
+  const vistos = new Map();
+  for (const it of itens) {
+    if (it.alerta) continue;
+    if (it.source_url && jaTem.has(it.source_url.split("?")[0])) { it.alerta = "já está nesta avaliação"; continue; }
+    if (!(it.price > 0 && it.area > 0)) continue;
+    // quadra: do endereço ou, se faltar, do próprio link (…-cls-415-…)
+    const quadra = ((it.address || "").match(/\d{2,4}/) ||
+      (it.source_url || "").match(/(?:cl[ns]|scl[ns]|sq[ns]w?|shi[ns]|cr[ns]|eq[ns]|qi|ql)-(\d{2,4})\b/i)?.slice(1) || [it.address || ""])[0];
+    const chave = `${quadra}|${Math.round(it.price)}|${Math.round(it.area)}`;
+    if (vistos.has(chave)) it.alerta = `repetido: mesmo preço e área de ${vistos.get(chave).address || "outro anúncio"}`;
+    else vistos.set(chave, it);
+  }
+  const m2 = itens.filter((i) => !i.alerta && i.price > 0 && i.area > 0).map((i) => i.price / i.area).sort((a, b) => a - b);
+  if (m2.length >= 5) {
+    const meio = Math.floor(m2.length / 2);
+    const mediana = m2.length % 2 ? m2[meio] : (m2[meio - 1] + m2[meio]) / 2;
+    for (const it of itens) {
+      if (it.alerta || !(it.price > 0 && it.area > 0)) continue;
+      const v = it.price / it.area;
+      if (v < mediana * 0.4 || v > mediana * 2.5)
+        it.alerta = `preço/m² fora da curva (${Math.round(v).toLocaleString("pt-BR")} vs mediana ${Math.round(mediana).toLocaleString("pt-BR")})`;
+    }
+  }
+  return itens;
+}
+
+export function lerComparativos(texto, nomeArquivo = "", urlsExistentes = []) {
   let arr;
   if (/\.csv$/i.test(nomeArquivo) || !/^\s*[[{]/.test(texto)) {
     arr = lerCsv(texto);
@@ -95,7 +126,7 @@ export function lerComparativos(texto, nomeArquivo = "") {
     if (!(item.price > 0)) problemas.push("preço ausente");
     if (!(item.area > 0)) problemas.push("área ausente");
     if (item.latitude != null && (item.latitude < -34 || item.latitude > 6)) problemas.push("latitude fora do Brasil");
-    for (const c of ["address", "source_url", "source_name", "thumbnail_url", "facade_url", "broker_observations", "titulo", "anunciante"])
+    for (const c of ["address", "source_url", "source_name", "thumbnail_url", "facade_url", "broker_observations", "titulo", "anunciante", "alerta"])
       if (item[c] != null) item[c] = String(item[c]).trim() || null;
     // extras (coletor / scanner original) → observações; título vira endereço se faltar
     const extras = [
@@ -113,5 +144,6 @@ export function lerComparativos(texto, nomeArquivo = "") {
     if (problemas.length) erros.push({ linha: i + 1, msg: problemas.join(", "), endereco: item.address });
     else validos.push(item);
   });
+  marcarAlertas(validos, urlsExistentes);
   return { validos, erros, total: arr.length };
 }

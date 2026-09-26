@@ -318,3 +318,21 @@ button, input, select, textarea { font: inherit; color: inherit; }
   .faixa-stats.kpis4 b { font-size: 16.5px; }
   .faixa-stats.kpis4 span { font-size: 12px; }
 }
+
+/* ---------- Telas de aviso (acesso pendente) ---------- */
+.tela-aviso { min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; padding: 24px; text-align: center; }
+.tela-aviso img { width: 90px; margin-bottom: 6px; }
+.tela-aviso h2 { margin: 0; color: var(--verde-escuro); font-size: 22px; }
+.tela-aviso p { margin: 0; max-width: 460px; color: var(--sub); line-height: 1.6; }
+.tela-aviso .erro-tecnico { max-width: 520px; font: 12px/1.5 var(--mono); background: #fff; border: 1px solid var(--linha); border-radius: 8px; padding: 8px 12px; color: var(--sub); word-break: break-word; }
+.acoes-aviso { display: flex; gap: 8px; margin-top: 6px; }
+
+/* ---------- Seleção de amostras na importação ---------- */
+.modal.modal-largo { max-width: 860px; width: calc(100vw - 32px); }
+.selecao-lista { max-height: min(52vh, 520px); overflow: auto; border: 1px solid var(--linha); border-radius: var(--raio); }
+.selecao-lista .tabela thead th { position: sticky; top: 0; background: var(--branco); z-index: 1; }
+.selecao-lista tr { cursor: pointer; }
+.selecao-lista tr:not(.sel) td { opacity: .62; }
+.selecao-lista tr.sel td { background: rgba(43,110,47,.05); }
+.selecao-lista td:first-child { width: 34px; }
+.alerta-linha { display: block; color: #8A5A00; font-size: 12px; margin-top: 2px; }

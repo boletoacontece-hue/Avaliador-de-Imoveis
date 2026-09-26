@@ -48,7 +48,7 @@ export function useToast() {
   return [el, setMsg];
 }
 
-export function Modal({ titulo, children, onFechar }) {
+export function Modal({ titulo, children, onFechar, largo = false }) {
   useEffect(() => {
     const esc = (e) => e.key === "Escape" && onFechar?.();
     window.addEventListener("keydown", esc);
@@ -56,7 +56,7 @@ export function Modal({ titulo, children, onFechar }) {
   }, [onFechar]);
   return (
     <div className="modal-fundo" onMouseDown={(e) => e.target === e.currentTarget && onFechar?.()}>
-      <div className="modal" role="dialog" aria-modal="true" aria-label={titulo}>
+      <div className={`modal ${largo ? "modal-largo" : ""}`} role="dialog" aria-modal="true" aria-label={titulo}>
         <h2>{titulo}</h2>
         {children}
       </div>
