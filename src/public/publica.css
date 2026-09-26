@@ -1,0 +1,157 @@
+/* ============================================================
+   Página pública — apresentação one-page para o cliente
+   ============================================================ */
+.pub { background: var(--off); color: var(--tinta); overflow-x: clip; }
+.pub-sec { padding: clamp(64px, 9vw, 120px) 20px; }
+.pub-in { max-width: 1080px; margin: 0 auto; }
+.pub-sec.branca { background: var(--branco); }
+.pub-sec.clara { background: var(--off); }
+.pub-titulo { font-size: clamp(26px, 3.6vw, 40px); font-weight: 600; letter-spacing: -.02em; line-height: 1.15; margin: 0 0 10px; color: var(--verde-escuro); max-width: 22ch; }
+.pub-lead { color: var(--sub); max-width: 62ch; margin: 0 0 36px; font-size: 16px; }
+
+/* ---------- Hero ---------- */
+.hero {
+  position: relative; min-height: 100svh; display: flex; flex-direction: column; overflow: hidden; color: #fff;
+  background: radial-gradient(120% 90% at 85% 10%, #2B6E2F 0%, rgba(43,110,47,0) 60%), linear-gradient(160deg, #1B3A1B 0%, #20472088 55%, #122612 100%), #1B3A1B;
+  padding: calc(28px + env(safe-area-inset-top, 0px)) 20px calc(28px + env(safe-area-inset-bottom, 0px));
+}
+.hero-particulas { position: absolute; inset: 0; pointer-events: none; }
+.hero-particulas span { position: absolute; width: 4px; height: 4px; border-radius: 50%; background: #fff; }
+.hero-topo { position: relative; z-index: 2; max-width: 1080px; width: 100%; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; gap: 16px; }
+.hero-topo img { height: 58px; width: auto; }
+.hero-topo .data { font-size: 13.5px; opacity: .75; }
+.hero-corpo { position: relative; z-index: 2; flex: 1; display: flex; flex-direction: column; justify-content: center; max-width: 1080px; width: 100%; margin: 0 auto; padding: 48px 0; }
+.hero-tipo { display: inline-flex; align-self: flex-start; font-size: 13px; font-weight: 500; color: var(--dourado); border: 1px solid rgba(201,169,97,.5); border-radius: 999px; padding: 4px 14px; margin-bottom: 22px; }
+.hero h1 { font-size: clamp(38px, 7.2vw, 88px); line-height: 1.02; font-weight: 600; letter-spacing: -.035em; margin: 0; max-width: 12ch; }
+.hero-cliente { margin-top: 26px; font-size: clamp(17px, 2vw, 21px); opacity: .85; }
+.hero-cliente b { display: block; font-size: clamp(24px, 3.4vw, 36px); font-weight: 500; color: #fff; opacity: 1; letter-spacing: -.01em; margin-top: 2px; }
+.hero-pilula { display: inline-flex; align-self: flex-start; align-items: center; gap: 8px; margin-top: 26px; padding: 10px 18px; border-radius: 999px; background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.18); backdrop-filter: blur(6px); font-size: 14.5px; max-width: 100%; }
+.hero-pilula svg { color: var(--dourado); flex: none; }
+.hero-rodape { position: relative; z-index: 2; max-width: 1080px; width: 100%; margin: 0 auto; display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; }
+.hero-corretor { display: flex; align-items: center; gap: 12px; }
+.hero-corretor img, .hero-corretor .sem-foto { width: 52px; height: 52px; border-radius: 50%; object-fit: cover; border: 2px solid rgba(255,255,255,.4); background: rgba(255,255,255,.12); display: grid; place-items: center; font-weight: 600; }
+.hero-corretor small { display: block; opacity: .7; font-size: 12.5px; }
+.hero-seta { color: #fff; opacity: .8; display: grid; justify-items: center; gap: 2px; font-size: 12px; text-decoration: none; }
+@media (max-width: 640px) {
+  .hero-topo img { height: 44px; }
+  .hero-rodape { flex-direction: column; align-items: flex-start; }
+  .hero-seta { align-self: center; }
+}
+
+/* ---------- Quem somos ---------- */
+.quem { display: grid; grid-template-columns: 1.2fr 1fr; gap: 48px; align-items: center; }
+.quem-stats { display: grid; gap: 28px; }
+.quem-stats div b { display: block; font-family: var(--mono); font-weight: 500; font-size: clamp(40px, 5vw, 60px); line-height: 1; color: var(--verde); letter-spacing: -.02em; }
+.quem-stats div span { color: var(--sub); }
+.credenciais { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 22px; }
+.credencial { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 500; padding: 6px 12px; border-radius: 999px; background: var(--verde-claro); color: var(--verde-escuro); }
+@media (max-width: 760px) { .quem { grid-template-columns: 1fr; gap: 32px; } }
+
+/* ---------- O imóvel ---------- */
+.ficha { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
+.ficha-item { background: var(--branco); border: 1px solid var(--linha); border-radius: 14px; padding: 18px; display: flex; flex-direction: column; gap: 10px; }
+.ficha-item svg { color: var(--verde); }
+.ficha-item b { display: block; font-family: var(--mono); font-weight: 500; font-size: 24px; line-height: 1.1; }
+.ficha-item span { display: block; font-size: 13px; color: var(--sub); margin-top: 2px; }
+.ficha-item.texto b { font-family: var(--fonte); font-size: 17px; font-weight: 600; }
+.imovel-endereco { display: flex; gap: 10px; align-items: flex-start; margin: 28px 0 0; font-size: 16px; }
+.imovel-endereco svg { color: var(--dourado); flex: none; margin-top: 3px; }
+.imovel-desc { margin-top: 24px; max-width: 70ch; white-space: pre-line; color: #3b463a; line-height: 1.7; }
+
+/* ---------- Percepções ---------- */
+.percep { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; }
+.percep h3 { display: flex; align-items: center; gap: 10px; font-size: 18px; margin: 0 0 14px; }
+.percep ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.percep li { display: flex; gap: 12px; align-items: flex-start; background: var(--off); border: 1px solid var(--linha); border-radius: 14px; padding: 14px 16px; }
+.percep li svg { flex: none; margin-top: 2px; }
+.percep .forte svg { color: var(--verde); }
+.percep .atencao svg { color: var(--ambar); }
+@media (max-width: 760px) { .percep { grid-template-columns: 1fr; } }
+
+/* ---------- Comparativos ---------- */
+.comps-grade { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+@media (max-width: 760px) { .comps-grade { grid-template-columns: 1fr; } }
+.comp-card { background: var(--branco); border: 1px solid var(--linha); border-radius: 18px; overflow: hidden; display: flex; flex-direction: column; }
+.comp-foto { position: relative; aspect-ratio: 16 / 10; background: linear-gradient(135deg, var(--verde-claro), #dfe8d9); }
+.comp-foto img { width: 100%; height: 100%; object-fit: cover; }
+.comp-foto .n { position: absolute; left: 12px; top: 12px; width: 32px; height: 32px; border-radius: 50%; background: var(--verde); color: #fff; display: grid; place-items: center; font: 600 13px var(--mono); border: 2px solid #fff; }
+.comp-foto .portal { position: absolute; right: 12px; top: 12px; background: rgba(255,255,255,.94); color: var(--verde-escuro); font-size: 12px; font-weight: 600; padding: 4px 10px; border-radius: 999px; }
+.comp-foto .sem { position: absolute; inset: 0; display: grid; place-items: center; color: var(--musgo); }
+.comp-corpo { padding: 18px; display: flex; flex-direction: column; gap: 10px; flex: 1; }
+.comp-corpo .end { font-size: 14.5px; color: var(--sub); }
+.comp-precos { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.comp-precos b { font-family: var(--mono); font-size: 22px; font-weight: 500; color: var(--verde-escuro); }
+.comp-precos span { font-family: var(--mono); font-size: 14px; color: var(--verde); }
+.comp-atributos { display: flex; gap: 16px; flex-wrap: wrap; font-size: 13.5px; color: var(--sub); }
+.comp-atributos span { display: inline-flex; align-items: center; gap: 5px; }
+.comp-obs { font-size: 14px; background: var(--off); border-left: 3px solid var(--dourado); padding: 10px 12px; border-radius: 0 10px 10px 0; }
+.comp-link { margin-top: auto; align-self: flex-start; display: inline-flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 500; }
+.bloco-grafico { background: var(--branco); border: 1px solid var(--linha); border-radius: 18px; padding: 24px; margin-top: 28px; }
+.bloco-grafico h3 { margin: 0 0 4px; font-size: 18px; color: var(--verde-escuro); }
+.bloco-grafico p { margin: 0 0 16px; color: var(--sub); font-size: 14px; }
+.mapa-pub { height: 420px; border-radius: 14px; overflow: hidden; }
+@media (max-width: 640px) { .mapa-pub { height: 340px; } .bloco-grafico { padding: 16px; } }
+
+/* ---------- Vendidas ---------- */
+.vend-grade { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 16px; }
+.vend-item { margin: 0; background: var(--branco); border-radius: 16px; overflow: hidden; border: 1px solid var(--linha); }
+.vend-item .img { position: relative; }
+.vend-item img { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; }
+.vend-item .selo { position: absolute; top: 12px; left: 12px; background: var(--verde-escuro); color: var(--dourado); font-weight: 600; font-size: 12px; letter-spacing: .06em; padding: 5px 12px; border-radius: 6px; transform: rotate(-3deg); box-shadow: 0 2px 8px rgba(0,0,0,.25); }
+.vend-item figcaption { padding: 12px 14px; font-size: 14px; }
+
+/* ---------- Educação ---------- */
+.edu { background: linear-gradient(165deg, #1B3A1B 0%, #2B6E2F 100%); color: #fff; }
+.edu .pub-titulo { color: #fff; }
+.edu .pub-lead { color: rgba(255,255,255,.75); }
+.edu-grade { display: grid; grid-template-columns: repeat(2, 1fr); gap: 18px; }
+.edu-card { background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.14); border-radius: 18px; padding: 24px; }
+.edu-card.largo { grid-column: 1 / -1; }
+.edu-card h3 { margin: 0 0 8px; font-size: 19px; }
+.edu-card p { margin: 0; color: rgba(255,255,255,.78); }
+.edu-card .nota { font-size: 12.5px; color: rgba(255,255,255,.55); margin-top: 8px; }
+.fotos-lado { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 16px; }
+.fotos-lado figure { margin: 0; }
+.fotos-lado img { border-radius: 10px; aspect-ratio: 4 / 3; object-fit: cover; width: 100%; }
+.fotos-lado figcaption { font-size: 13px; margin-top: 6px; color: rgba(255,255,255,.7); }
+@media (max-width: 760px) { .edu-grade { grid-template-columns: 1fr; } }
+
+/* ---------- Valor sugerido ---------- */
+.valor-bloco { background: var(--verde-escuro); color: #fff; border-radius: 24px; padding: clamp(28px, 5vw, 56px); position: relative; overflow: hidden; }
+.valor-bloco::after { content: ""; position: absolute; right: -80px; top: -80px; width: 280px; height: 280px; border-radius: 50%; border: 1px solid rgba(201,169,97,.3); }
+.valor-rotulo { font-size: 15px; opacity: .75; }
+.valor-numero { font-family: var(--mono); font-weight: 500; font-size: clamp(40px, 8.5vw, 96px); line-height: 1; letter-spacing: -.03em; color: var(--dourado); margin: 10px 0 8px; word-break: break-word; }
+.valor-m2 { font-family: var(--mono); font-size: 15px; opacity: .8; }
+.valor-texto { margin-top: 28px; max-width: 68ch; white-space: pre-line; line-height: 1.7; color: rgba(255,255,255,.88); }
+.valor-notas { margin-top: 28px; max-width: 70ch; }
+.valor-notas h3 { font-size: 18px; margin: 0 0 8px; color: var(--verde-escuro); }
+.valor-notas p { white-space: pre-line; line-height: 1.7; margin: 0; }
+.metodologia { margin-top: 32px; font-size: 13px; color: var(--sub); max-width: 80ch; border-top: 1px solid var(--linha); padding-top: 18px; line-height: 1.6; }
+
+/* ---------- Cartão do corretor ---------- */
+.cartao { background: var(--branco); border: 1px solid var(--linha); border-radius: 24px; padding: 28px; display: grid; grid-template-columns: auto 1fr auto; gap: 24px; align-items: center; max-width: 820px; margin: 0 auto; }
+.cartao .foto, .cartao .sem-foto { width: 108px; height: 108px; border-radius: 50%; object-fit: cover; background: var(--verde-claro); display: grid; place-items: center; font-size: 34px; font-weight: 600; color: var(--verde); }
+.cartao h3 { margin: 0; font-size: 22px; }
+.cartao .regs { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+.cartao .tel { margin-top: 8px; font-family: var(--mono); color: var(--sub); }
+.btn-whats { background: #1f8f4e; min-height: 50px; padding: 0 22px; font-size: 15px; border-radius: 999px; }
+.btn-whats:hover { background: #17733e; }
+@media (max-width: 700px) {
+  .cartao { grid-template-columns: 1fr; justify-items: center; text-align: center; }
+  .cartao .regs { justify-content: center; }
+}
+.pub-rodape { text-align: center; padding: 32px 20px calc(40px + env(safe-area-inset-bottom, 0px)); color: var(--sub); font-size: 13px; }
+.pub-rodape img { height: 40px; margin: 0 auto 10px; }
+
+/* ---------- Inativa ---------- */
+.inativa-tela { min-height: 100svh; display: grid; place-items: center; padding: 32px 20px; background: var(--off); }
+.inativa-tela .box { text-align: center; max-width: 820px; width: 100%; }
+.inativa-tela .box > img { height: 70px; margin: 0 auto 18px; }
+.inativa-tela h1 { font-size: 26px; color: var(--verde-escuro); margin: 0 0 6px; }
+.inativa-tela p { color: var(--sub); margin: 0 0 28px; }
+
+/* ---------- Inteligência de mercado ---------- */
+.mercado-grade { display: grid; grid-template-columns: 1.4fr 1fr; gap: 20px; align-items: start; }
+@media (max-width: 860px) { .mercado-grade { grid-template-columns: 1fr; } }
+.nota-fonte { font-size: 12.5px; color: var(--sub); margin: 14px 0 0; }
+.valor-notas p + p { margin-top: 12px; }

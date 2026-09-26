@@ -1,0 +1,8 @@
+node_modules
+dist
+.env
+.env.local
+# Coletor de Amostras (arquivos locais do corretor)
+ferramentas/coletor-amostras/saida/
+ferramentas/coletor-amostras/.perfil-navegador/
+__pycache__/
