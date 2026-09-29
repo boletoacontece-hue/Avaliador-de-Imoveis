@@ -51,5 +51,5 @@ export function linkWhatsApp(phone, mensagem) {
   return `https://wa.me/${d}?text=${encodeURIComponent(mensagem)}`;
 }
 
-export const TIPOS_IMOVEL = ["Apartamento", "Casa", "Casa em Condomínio", "Cobertura", "Garden", "Studio",
+export const TIPOS_IMOVEL = ["Apartamento", "Kitnete", "Casa", "Casa em Condomínio", "Cobertura", "Garden", "Studio",
   "Sala Comercial", "Loja", "Galpão", "Terreno"];

@@ -6,7 +6,7 @@ const SUGESTOES = {
   concerns: ["Barulho da rua", "Necessita reforma", "Sol da tarde", "Andar baixo", "Condomínio alto", "Sem elevador"],
 };
 
-function ListaDinamica({ titulo, dica, cor, itens, onChange, sugestoes }) {
+export function ListaDinamica({ titulo, dica, cor, itens, onChange, sugestoes, embutida = false }) {
   const [novo, setNovo] = useState("");
   const adicionar = (t) => {
     const v = (t ?? novo).trim();
@@ -15,8 +15,8 @@ function ListaDinamica({ titulo, dica, cor, itens, onChange, sugestoes }) {
   };
   const livres = sugestoes.filter((s) => !itens.includes(s));
   return (
-    <section className="painel" style={{ marginTop: 0 }}>
-      <h2 style={{ display: "flex", alignItems: "center", gap: 8 }}><span className="marcador" style={{ width: 10, height: 10, borderRadius: "50%", background: cor }} />{titulo}</h2>
+    <section className={embutida ? "" : "painel"} style={{ marginTop: 0 }}>
+      <h2 style={{ display: "flex", alignItems: "center", gap: 8, ...(embutida ? { fontSize: 15 } : {}) }}><span className="marcador" style={{ width: 10, height: 10, borderRadius: "50%", background: cor }} />{titulo}</h2>
       <p className="dica">{dica}</p>
       <div className="lista-itens">
         {itens.map((it, i) => (

@@ -64,6 +64,9 @@ function CardComparativo({ c, n, tipo, cidade, uf, onAlterar, onFoto, onRemoverF
             {geo === "nao" && <small className="dica">Não localizado. Informe as coordenadas manualmente.</small>}
             {geo === "sem" && <small className="dica">Preencha o endereço primeiro.</small>}
           </div>
+          <Campo rotulo="Anunciante" className="span2" dica="Imobiliária ou corretor do anúncio (vai para a tabela do laudo).">
+            <input className="input" value={c.advertiser || ""} onChange={setTxt("advertiser")} />
+          </Campo>
           <Campo rotulo="Observações do corretor" className="span-all" dica="Aparece no card da amostra: diferenças em relação ao imóvel avaliado.">
             <textarea className="textarea" style={{ minHeight: 70 }} value={c.broker_observations || ""} onChange={setTxt("broker_observations")} />
           </Campo>

@@ -130,13 +130,13 @@ export function lerComparativos(texto, nomeArquivo = "", urlsExistentes = []) {
       if (item[c] != null) item[c] = String(item[c]).trim() || null;
     // extras (coletor / scanner original) → observações; título vira endereço se faltar
     const extras = [
-      item.anunciante && `Anunciante: ${item.anunciante}`,
       item.condominio > 0 && `Condomínio ${moeda(item.condominio)}`,
       item.iptu > 0 && `IPTU ${moeda(item.iptu)}`,
     ].filter(Boolean);
     if (extras.length && !(item.broker_observations || "").includes(extras[0]))
       item.broker_observations = [item.broker_observations, extras.join(" · ")].filter(Boolean).join(" · ");
     if (!item.address && item.titulo) item.address = item.titulo;
+    if (item.anunciante) item.advertiser = item.anunciante; // coluna própria (tabela do laudo completo)
     delete item.titulo; delete item.anunciante; delete item.condominio; delete item.iptu;
     // URLs de portal: só http(s)
     for (const c of ["source_url", "thumbnail_url", "facade_url"])

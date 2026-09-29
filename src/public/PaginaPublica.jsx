@@ -3,7 +3,7 @@ import { supabase } from "../lib/supabase";
 import { montarEndereco } from "../lib/format";
 import { EMPRESA } from "../config/empresa";
 import Hero from "./Hero";
-import { QuemSomos, OImovel, Percepcoes, Comparativos, Vendidas, InteligenciaMercado, EducacaoMercado, ValorSugerido, CartaoCorretor } from "./Secoes";
+import { QuemSomos, OImovel, Percepcoes, Comparativos, Vendidas, InteligenciaMercado, TermometroMercado, EducacaoMercado, ValorSugerido, CartaoCorretor } from "./Secoes";
 import NaoEncontrado from "../pages/NaoEncontrado";
 import { Carregando } from "../components/ui";
 import "./publica.css";
@@ -60,6 +60,7 @@ export default function PaginaPublica({ codigo }) {
       <Comparativos av={av} comps={comps} endereco={endereco} />
       <Vendidas av={av} vendidas={vendidas} />
       <InteligenciaMercado mercado={dados.mercado} av={av} fundo={vendidas.length ? "clara" : "branca"} />
+      <TermometroMercado av={av} />
       <EducacaoMercado av={av} />
       <ValorSugerido av={av} corretor={dados.corretor} />
       <CartaoCorretor corretor={dados.corretor} endereco={endereco} />

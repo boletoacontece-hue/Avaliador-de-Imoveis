@@ -9,16 +9,22 @@ import TabImovel from "../components/editor/TabImovel";
 import TabPercepcoes from "../components/editor/TabPercepcoes";
 import TabComparativos from "../components/editor/TabComparativos";
 import TabValor from "../components/editor/TabValor";
+import TabMercado from "../components/editor/TabMercado";
 
 const CAMPOS_EVAL = ["title", "client_name", "property_cep", "property_street", "property_number", "property_complement",
   "property_neighborhood", "property_city", "property_state", "property_condo_name", "property_type", "property_area",
   "property_bedrooms", "property_suites", "property_bathrooms", "property_parking", "property_floor", "property_elevator",
   "property_latitude", "property_longitude", "property_description", "evaluation_type", "advantages", "concerns",
-  "suggested_value", "suggested_value_description", "ai_strategy", "final_notes"];
+  "suggested_value", "suggested_value_description", "ai_strategy", "final_notes",
+  // laudos (0003)
+  "report_type", "property_code", "interested_party", "purpose", "occupancy", "current_rent", "area_total", "condo_fee",
+  "iptu_value", "iptu_registration", "registry_number", "features", "market_value", "negotiation_min", "negotiation_max",
+  "target_days", "portal_study"];
 const NUM_EVAL = new Set(["property_area", "property_bedrooms", "property_suites", "property_bathrooms", "property_parking",
-  "property_floor", "property_latitude", "property_longitude", "suggested_value"]);
+  "property_floor", "property_latitude", "property_longitude", "suggested_value", "current_rent", "area_total", "condo_fee",
+  "iptu_value", "market_value", "negotiation_min", "negotiation_max", "target_days"]);
 const CAMPOS_COMP = ["address", "price", "area", "bedrooms", "suites", "parking", "source_url", "source_name", "thumbnail_url",
-  "facade_url", "broker_observations", "latitude", "longitude", "sort_order"];
+  "facade_url", "broker_observations", "latitude", "longitude", "sort_order", "advertiser"];
 const NUM_COMP = new Set(["price", "area", "bedrooms", "suites", "parking", "latitude", "longitude", "sort_order"]);
 
 const AUTOSAVE_MS = 5000;
@@ -28,18 +34,22 @@ function paraNumero(v) {
   const n = Number(v);
   return isNaN(n) ? null : n;
 }
+// campos obrigatórios no banco: campo apagado no formulário volta ao padrão
+const PADROES = { negotiation_min: 3, negotiation_max: 7, target_days: 120, report_type: "completo", features: [] };
+
 function montarPayload(obj, campos, numericos) {
   const p = {};
   for (const k of campos) {
     let v = obj[k];
     if (numericos.has(k)) v = paraNumero(v);
     else if (typeof v === "string") v = v.trim() === "" ? null : v;
+    if (v == null && k in PADROES) v = PADROES[k];
     p[k] = v;
   }
   return p;
 }
 
-const ABAS = [["imovel", "Imóvel"], ["percepcoes", "Percepções"], ["comparativos", "Comparativos"], ["valor", "Valor"]];
+const ABAS = [["imovel", "Imóvel"], ["percepcoes", "Percepções"], ["comparativos", "Comparativos"], ["mercado", "Mercado"], ["valor", "Valor"]];
 
 export default function Editor() {
   const { id } = useParams();
@@ -339,6 +349,7 @@ export default function Editor() {
         {aba === "imovel" && <TabImovel f={f} set={set} setVarios={setVarios} />}
         {aba === "percepcoes" && <TabPercepcoes f={f} set={set} />}
         {aba === "comparativos" && <TabComparativos f={f} comps={comps} vendidas={vendidas} acoes={acoes} />}
+        {aba === "mercado" && <TabMercado f={f} set={set} />}
         {aba === "valor" && <TabValor f={f} set={set} comps={comps} salvarAntes={() => salvarRef.current()} />}
 
         <div style={{ display: "flex", justifyContent: "space-between", marginTop: 24, gap: 8 }}>

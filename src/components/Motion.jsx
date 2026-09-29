@@ -81,7 +81,8 @@ export function AnimatedCounter({ valor, prefixo = "", sufixo = "", className })
     if (visivel || passou) mola.set(valor);
   }, [visivel, passou, valor, reduz, mola]);
   useEffect(() => {
-    const a = mola.on("change", (v) => setTexto(fmt.format(Math.round(v))));
+    // a mola pode assentar a centavos do alvo: perto do fim, mostra o valor exato
+    const a = mola.on("change", (v) => setTexto(fmt.format(Math.abs(v - valor) < Math.max(1, valor * 0.0005) ? valor : Math.round(v))));
     const b = mola.on("animationComplete", () => setTexto(fmt.format(valor)));
     return () => { a(); b(); };
   }, [mola, valor]);

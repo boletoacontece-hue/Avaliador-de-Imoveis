@@ -121,6 +121,7 @@ export function Comparativos({ av, comps, endereco }) {
                 </div>
                 <div className="comp-corpo">
                   {c.address && <div className="end">{c.address}</div>}
+                  {c.advertiser && <div className="anunciante">Anunciado por {c.advertiser}</div>}
                   <div className="comp-precos"><b>{brl(c.price)}{tipo === "aluguel" ? "/mês" : ""}</b><span>{fmtM2(m2, tipo)}</span></div>
                   <div className="comp-atributos">
                     {c.area && <span><Ruler size={14} /> {num(c.area)} m²</span>}
@@ -219,8 +220,57 @@ export function InteligenciaMercado({ mercado, av, fundo = "clara" }) {
   );
 }
 
+// Indicadores do estudo do portal (ex.: DFImóveis/TIMIPRO), sempre com a fonte
+export function TermometroMercado({ av }) {
+  const e = av.portal_study;
+  if (!e || !(e.preco_m2_medio || e.preco_medio || e.tempo_venda_meses || e.leads_12m)) return null;
+  const aluguel = av.evaluation_type === "aluguel";
+  const m2Oferta = precoM2(av.suggested_value, av.property_area);
+  const posicao = m2Oferta && e.preco_m2_medio ? ((m2Oferta / e.preco_m2_medio) - 1) * 100 : null;
+  const faixa = e.menor_valor > 0 && e.maior_valor > e.menor_valor;
+  const ponto = faixa && av.suggested_value ? Math.min(100, Math.max(0, ((av.suggested_value - e.menor_valor) / (e.maior_valor - e.menor_valor)) * 100)) : null;
+  const cartoes = [
+    e.preco_m2_medio > 0 && { v: fmtM2(e.preco_m2_medio, av.evaluation_type), r: "preço médio do m² no segmento",
+      d: posicao != null ? `a oferta deste imóvel está ${Math.abs(posicao).toFixed(0)}% ${posicao >= 0 ? "acima" : "abaixo"} da média` : null },
+    e.tempo_venda_meses > 0 && { v: `${num(e.tempo_venda_meses)} meses`, r: aluguel ? "tempo médio para alugar" : "tempo médio até a venda", d: "entre os anúncios que saíram do portal" },
+    e.leads_12m > 0 && { v: num(e.leads_12m), r: "interessados em 12 meses", d: e.leads_por_oferta ? `${num(e.leads_por_oferta)} contatos por anúncio, em média` : null },
+    e.valorizacao_ano != null && { v: `${e.valorizacao_ano >= 0 ? "+" : ""}${num(e.valorizacao_ano)}%`, r: "valorização do m² em 12 meses",
+      d: e.valorizacao_bairro != null && e.bairro ? `${e.bairro}: ${e.valorizacao_bairro >= 0 ? "+" : ""}${num(e.valorizacao_bairro)}% no ano` : null },
+    e.anuncios > 0 && { v: num(e.anuncios), r: "imóveis semelhantes anunciados", d: e.area_media ? `área média de ${num(e.area_media)} m²` : null },
+    e.valor_medio_saida > 0 && { v: brl(e.valor_medio_saida), r: "valor médio dos que saíram do portal", d: "referência, não teto" },
+  ].filter(Boolean);
+  return (
+    <Reveal className="pub-sec termo">
+      <div className="pub-in">
+        <h2 className="pub-titulo">Termômetro do mercado</h2>
+        <p className="pub-lead">Oferta, procura e tempo de venda de imóveis como o seu{e.segmento ? `: ${e.segmento}` : ""}.</p>
+        <Stagger className="termo-grade">
+          {cartoes.map((c, i) => (
+            <StaggerItem key={i} className="termo-card">
+              <b className="num">{c.v}</b><span>{c.r}</span>{c.d && <small>{c.d}</small>}
+            </StaggerItem>
+          ))}
+        </Stagger>
+        {faixa && (
+          <div className="termo-faixa">
+            <div className="rotulos"><span>Menor anúncio<br /><b className="num">{brl(e.menor_valor)}</b></span><span style={{ textAlign: "right" }}>Maior anúncio<br /><b className="num">{brl(e.maior_valor)}</b></span></div>
+            <div className="trilho">{ponto != null && <i style={{ left: `${ponto}%` }} title="Oferta deste imóvel" />}</div>
+            {ponto != null && <small>O ponto dourado é a oferta sugerida para o seu imóvel dentro da faixa de preços do segmento.</small>}
+          </div>
+        )}
+        <p className="nota-fonte">
+          Fonte: {e.fonte || "portal imobiliário"}{e.amostra ? `, amostra de ${num(e.amostra)} imóveis` : ""}{e.referencia ? `, dados de ${e.referencia}` : ""}.
+          {" "}Indicadores de média do segmento; o valor deste estudo vem das amostras comparáveis.
+        </p>
+      </div>
+    </Reveal>
+  );
+}
+
 export function EducacaoMercado({ av }) {
   const aluguel = av.evaluation_type === "aluguel";
+  const estudo = av.portal_study || {};
+  const diasReal = estudo.tempo_venda_meses > 0 ? Math.round(estudo.tempo_venda_meses * 30) : null;
   const fotos = EMPRESA.fotoAmadora && EMPRESA.fotoProfissional;
   return (
     <Reveal className="pub-sec edu">
@@ -239,8 +289,11 @@ export function EducacaoMercado({ av }) {
           <StaggerItem className="edu-card largo">
             <h3>Quanto mais tempo parado, menos atenção</h3>
             <p>A atratividade de um anúncio é maior no lançamento e cai à medida que ele envelhece nos portais.</p>
-            <div style={{ marginTop: 16 }}><Suspense fallback={<EsperaGrafico />}><LiquidityChart claro /></Suspense></div>
-            <p className="nota">Curva ilustrativa: dias no mercado × atratividade relativa do anúncio.</p>
+            <div style={{ marginTop: 16 }}><Suspense fallback={<EsperaGrafico />}><LiquidityChart claro diasVendaReal={diasReal} /></Suspense></div>
+            <p className="nota">
+              Curva ilustrativa: dias no mercado × atratividade relativa do anúncio.
+              {diasReal ? ` A linha tracejada é o tempo médio real que imóveis deste segmento levaram para sair do portal (${estudo.fonte || "portal"}${estudo.referencia ? `, ${estudo.referencia}` : ""}).` : ""}
+            </p>
           </StaggerItem>
           <StaggerItem className="edu-card largo">
             <h3>Foto profissional faz diferença</h3>
@@ -261,14 +314,27 @@ export function EducacaoMercado({ av }) {
 export function ValorSugerido({ av, corretor }) {
   const aluguel = av.evaluation_type === "aluguel";
   const m2 = precoM2(av.suggested_value, av.property_area);
+  const mercado = Number(av.market_value) || null;
+  const oferta = Number(av.suggested_value) || null;
+  const dMin = Number(av.negotiation_min ?? 3), dMax = Number(av.negotiation_max ?? 7);
+  const renda = av.occupancy === "alugado" && Number(av.current_rent) > 0 ? Number(av.current_rent) : null;
+  const rentab = renda && oferta && !aluguel ? (renda * 12 / oferta) * 100 : null;
   return (
     <Reveal className="pub-sec branca">
       <div className="pub-in">
         {av.suggested_value ? (
           <div className="valor-bloco">
-            <div className="valor-rotulo">{aluguel ? "Aluguel mensal sugerido" : "Valor de venda sugerido"}</div>
-            <div className="valor-numero"><AnimatedCounter valor={Number(av.suggested_value)} prefixo="R$ " /></div>
+            <div className="valor-rotulo">{mercado ? (aluguel ? "Aluguel sugerido para anúncio" : "Valor estratégico de oferta") : (aluguel ? "Aluguel mensal sugerido" : "Valor de venda sugerido")}</div>
+            <div className="valor-numero"><AnimatedCounter valor={oferta} prefixo="R$ " /></div>
             {m2 && <div className="valor-m2">{fmtM2(m2, av.evaluation_type)}</div>}
+            {(mercado || renda) && (
+              <div className="valor-detalhes">
+                {mercado && <div><span>Valor de mercado (técnico)</span><b>{brl(mercado)}</b><small>{fmtM2(precoM2(mercado, av.property_area), av.evaluation_type)}</small></div>}
+                {mercado && <div><span>Fechamento estimado</span><b>{brl(oferta * (1 - dMax / 100))} a {brl(oferta * (1 - dMin / 100))}</b><small>com {num(dMin)}% a {num(dMax)}% de negociação</small></div>}
+                {av.target_days > 0 && mercado && <div><span>Prazo-alvo</span><b>até {av.target_days} dias</b><small>{aluguel ? "para alugar" : "para vender"} com este posicionamento</small></div>}
+                {renda && <div><span>Renda atual do imóvel</span><b>{brl(renda)}/mês</b>{rentab && <small>rentabilidade bruta de {rentab.toFixed(1).replace(".", ",")}% ao ano sobre a oferta</small>}</div>}
+              </div>
+            )}
             {av.suggested_value_description && <div className="valor-texto">{av.suggested_value_description}</div>}
           </div>
         ) : (
