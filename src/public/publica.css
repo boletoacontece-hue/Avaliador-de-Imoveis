@@ -185,3 +185,19 @@
 .valor-detalhes b { font-family: "IBM Plex Mono", monospace; font-weight: 500; color: #fff; font-size: 16px; }
 .valor-detalhes small { font-size: 12px; color: rgba(255,255,255,.6); }
 .comp-card .anunciante, .anunciante { font-size: 12.5px; color: var(--sub); margin-top: -2px; }
+
+/* ---------- Cards de amostra padronizados (foto e blocos sempre do mesmo tamanho) ---------- */
+.comp-foto { overflow: hidden; aspect-ratio: 4 / 3; height: auto; }
+.comp-foto img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center; display: block; }
+.comp-foto .n, .comp-foto .portal { z-index: 1; }
+.comp-corpo .end { font-weight: 500; color: var(--texto); line-height: 1.35; min-height: calc(1.35em * 2);
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.comp-corpo .anunciante { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.comp-obs { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.comps-grade { grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); align-items: stretch; }
+.vend-item .img { overflow: hidden; aspect-ratio: 4 / 3; }
+.vend-item img { position: absolute; inset: 0; width: 100%; height: 100%; aspect-ratio: auto; object-fit: cover; }
+.vend-item .selo { z-index: 1; }
+.comps-grade { grid-auto-rows: 1fr; }
+.comp-atributos { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 12px; }
+.comp-atributos span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

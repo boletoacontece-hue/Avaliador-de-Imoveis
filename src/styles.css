@@ -357,3 +357,9 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .dois-valores .rot { font-weight: 600; color: var(--verde-escuro); font-size: 14px; }
 .dois-valores .rot small { font-weight: 400; color: var(--sub); }
 @media (max-width: 760px) { .dois-valores { grid-template-columns: 1fr; } }
+
+/* ---------- Aba Ficha Imobiliar ---------- */
+.selo-privacidade { display: inline-flex; align-items: flex-start; gap: 6px; font-size: 12.5px; color: var(--verde); background: var(--verde-claro); border-radius: 8px; padding: 6px 10px; margin-top: 4px; line-height: 1.45; }
+.selo-privacidade svg { flex-shrink: 0; margin-top: 2px; }
+.leitura-ficha ul { margin: 8px 0 0; padding-left: 20px; line-height: 1.75; }
+.alerta-texto { color: #8A5A00; }

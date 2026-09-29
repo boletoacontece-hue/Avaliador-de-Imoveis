@@ -4,7 +4,7 @@ import { Campo, InputNumero } from "../ui";
 import { buscarCep, buscarRuas, geocodificar } from "../../lib/enderecos";
 import { fmtCep, onlyDigits, TIPOS_IMOVEL, montarEndereco } from "../../lib/format";
 import LazyMap from "../LazyMap";
-import { TipoLaudo, ImportarFicha, DadosCadastrais } from "./DadosLaudo";
+import { TipoLaudo, DadosCadastrais } from "./DadosLaudo";
 
 export default function TabImovel({ f, set, setVarios }) {
   const [cepStatus, setCepStatus] = useState("");
@@ -62,9 +62,6 @@ export default function TabImovel({ f, set, setVarios }) {
   return (
     <>
       <TipoLaudo f={f} set={set} />
-      <section className="painel">
-        <ImportarFicha f={f} setVarios={setVarios} />
-      </section>
       <section className="painel">
         <h2>Cliente e finalidade</h2>
         <p className="dica">O nome do cliente e o título aparecem na capa da apresentação.</p>

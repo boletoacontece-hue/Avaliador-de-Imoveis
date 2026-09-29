@@ -103,6 +103,9 @@ export function Comparativos({ av, comps, endereco }) {
   if (!comps.length) return null;
   const tipo = av.evaluation_type;
   const temMapa = comps.some((c) => c.latitude != null) || av.property_latitude != null;
+  // atributos iguais em todos os cards: só entra o que ao menos uma amostra tem
+  const temQuartos = comps.some((c) => c.bedrooms > 0);
+  const temSuites = comps.some((c) => c.suites > 0);
   return (
     <Reveal className="pub-sec clara">
       <div className="pub-in">
@@ -120,16 +123,16 @@ export function Comparativos({ av, comps, endereco }) {
                   {c.source_name && <span className="portal">{c.source_name}</span>}
                 </div>
                 <div className="comp-corpo">
-                  {c.address && <div className="end">{c.address}</div>}
-                  {c.advertiser && <div className="anunciante">Anunciado por {c.advertiser}</div>}
+                  <div className="end" title={c.address || ""}>{c.address || "Endereço não informado"}</div>
+                  <div className="anunciante">{c.advertiser ? `Anunciado por ${c.advertiser}` : "\u00a0"}</div>
                   <div className="comp-precos"><b>{brl(c.price)}{tipo === "aluguel" ? "/mês" : ""}</b><span>{fmtM2(m2, tipo)}</span></div>
                   <div className="comp-atributos">
-                    {c.area && <span><Ruler size={14} /> {num(c.area)} m²</span>}
-                    {c.bedrooms != null && <span><BedDouble size={14} /> {c.bedrooms} {c.bedrooms === 1 ? "quarto" : "quartos"}</span>}
-                    {c.suites != null && c.suites > 0 && <span><Sparkles size={14} /> {c.suites} {c.suites === 1 ? "suíte" : "suítes"}</span>}
-                    {c.parking != null && <span><Car size={14} /> {c.parking} {c.parking === 1 ? "vaga" : "vagas"}</span>}
+                    <span><Ruler size={14} /> {c.area ? `${num(c.area)} m²` : "—"}</span>
+                    {temQuartos && <span><BedDouble size={14} /> {c.bedrooms != null ? `${c.bedrooms} ${c.bedrooms === 1 ? "quarto" : "quartos"}` : "—"}</span>}
+                    {temSuites && <span><Sparkles size={14} /> {c.suites != null ? `${c.suites} ${c.suites === 1 ? "suíte" : "suítes"}` : "—"}</span>}
+                    <span><Car size={14} /> {c.parking != null ? `${c.parking} ${c.parking === 1 ? "vaga" : "vagas"}` : "— vagas"}</span>
                   </div>
-                  {c.broker_observations && <div className="comp-obs">{c.broker_observations}</div>}
+                  {c.broker_observations && <div className="comp-obs" title={c.broker_observations}>{c.broker_observations}</div>}
                   {c.source_url && <a className="comp-link" href={c.source_url} target="_blank" rel="noopener noreferrer nofollow">Ver anúncio original <ExternalLink size={14} /></a>}
                 </div>
               </StaggerItem>

@@ -114,6 +114,25 @@ const frase = (s) => {
 };
 
 // ------------------------------------------------------------ ficha do Imobiliar
+/** Texto de tudo à direita do rótulo, na mesma linha, até o próximo rótulo. */
+function restoDaLinha(itens, re, filtro) {
+  for (const r of achar(itens, re, filtro)) {
+    const partes = [];
+    for (const i of itens.filter((i) => i.p === r.p && Math.abs(i.y - r.y) <= 4.5 && i.x > r.x + 1).sort((a, b) => a.x - b.x)) {
+      if (/[.:]\s*$/.test(i.s) || /\.{3,}/.test(i.s)) break; // começou outro rótulo
+      partes.push(i.s);
+    }
+    if (partes.length) return partes.join(" ");
+  }
+  return null;
+}
+const data = (s) => ((s || "").replace(/\s+/g, "").match(/\d{2}\/\d{2}\/\d{4}/) || [])[0] || null;
+const simNao = (s) => (s == null ? null : /^s/i.test(s.trim()) ? true : /^n/i.test(s.trim()) ? false : null);
+
+/**
+ * Lê a ficha do imóvel do Imobiliar (ficha completa ou "Consulta de imóveis") e devolve
+ * TODOS os dados do imóvel e da locação úteis ao laudo — nenhum dado de pessoa.
+ */
 export function lerFichaImobiliar(itens) {
   const tudo = itens.map((i) => i.s).join(" ");
   if (!/ficha do im[oó]vel/i.test(tudo)) throw new Error("Este PDF não parece uma ficha de imóvel do Imobiliar.");
@@ -124,63 +143,128 @@ export function lerFichaImobiliar(itens) {
   const permitido = (i) => !(hProp && i.p === hProp.p && i.y <= hProp.y + 2 && (!hCarac || i.y > hCarac.y + 2));
   const base = itens.filter(permitido);
   const v = (re, valida) => aoLado(base, re, valida);
+  const linha = (re) => restoDaLinha(base, re);
+  const nDec = (re) => numeroBr(v(re, (s) => /^[\d.,]+$/.test(s)));
+  const completa = !!hCarac;
 
-  const f = {};
-  f.property_code = v(/^codigo$/, (s) => /^\d+$/.test(s));
-  const endereco = v(/^endereco$/);
-  f.property_cep = v(/^cep$/, (s) => /\d{5}-?\d{3}/.test(s)) || (tudo.match(/CEP:?\s*(\d{5}-?\d{3})/i) || [])[1] || null;
-  if (endereco) {
-    const { rua, complemento } = separarEndereco(endereco);
-    f.property_street = rua;
-    if (complemento) f.property_complement = complemento;
-    const ultimo = endereco.split(" - ").pop().trim();
-    if (/^[A-Za-zÀ-ú ]{3,30}$/.test(ultimo) && !UNIDADE.test(ultimo)) f.property_neighborhood = titulo(ultimo);
+  const f = { formato: completa ? "Ficha do imóvel (completa)" : "Consulta de imóveis" };
+  const emissao = itens.find((i) => i.p === 1 && /\d{2}\/\s?\d{2}\/\s?\d{4}\s+\d{2}:\d{2}/.test(i.s));
+  f.emitida_em = emissao ? data(emissao.s) : null;
+
+  // ---- identificação
+  f.codigo = v(/^codigo$/, (s) => /^\d+$/.test(s));
+  f.endereco_ficha = v(/^endereco$/);
+  f.cep = v(/^cep$/, (s) => /\d{5}-?\d{3}/.test(s)) || (tudo.match(/CEP:?\s*(\d{5}-?\d{3})/i) || [])[1] || null;
+  if (f.endereco_ficha) {
+    const { rua, complemento } = separarEndereco(f.endereco_ficha);
+    f.rua = rua;
+    f.complemento = complemento || null;
+    const ultimo = f.endereco_ficha.split(" - ").pop().trim();
+    if (/^[A-Za-zÀ-ú ]{3,30}$/.test(ultimo) && !UNIDADE.test(ultimo)) f.bairro = titulo(ultimo);
   }
   const bairro = v(/^bairro$/, (s) => /^[A-Za-zÀ-ú ]{3,40}$/.test(s));
-  if (bairro) f.property_neighborhood = titulo(bairro);
+  if (bairro) f.bairro = titulo(bairro);
   const cidade = v(/^cidade$/, (s) => /^[A-Za-zÀ-ú ]{3,40}$/.test(s));
-  f.property_city = cidade ? titulo(cidade).replace(/^Brasilia$/, "Brasília") : "Brasília";
-  f.property_state = v(/^uf$/, (s) => /^[A-Z]{2}$/.test(s)) || "DF";
+  f.cidade = cidade ? titulo(cidade).replace(/^Brasilia$/, "Brasília") : "Brasília";
+  f.uf = v(/^uf$/, (s) => /^[A-Z]{2}$/.test(s)) || "DF";
+  f.tipo_ficha = v(/^tipo d[eo] imovel$/);
+  f.tipo = tipoPadrao(f.tipo_ficha);
+  f.data_inclusao = data(v(/^data de inclusao$/));
+  f.classificacao = v(/^classificacao$/, (s) => /^[A-ZÀ-Ú ]{3,20}$/.test(s));
+  f.para_venda = simNao(v(/^para venda$/));
+  f.para_locacao = simNao(v(/^para locacao$/));
 
-  f.property_type = tipoPadrao(v(/^tipo d[eo] imovel$/));
+  // ---- áreas e composição
+  f.area_privativa = nDec(/^metragem$/);
+  f.area_total = nDec(/^2[ªa] metragem$/);
+  f.dormitorios = numeroBr(v(/^n[ºo°]? ?dormitorios$/, (s) => /^\d+$/.test(s)));
+  f.vagas = numeroBr(v(/^garagem$/, (s) => /^\d+$/.test(s)));
+
+  // ---- condomínio e custos
+  f.edificio = v(/^nome$/);
+  const adm = v(/^administradora$/);
+  f.administradora_condominio = adm ? adm.replace(/^\d+-/, "").trim() : null;
+  f.condominio_inicial = nDec(/^vlr cond\.? inicial$/);
+  f.iptu_parcela = nDec(/^(vlr parcela iptu|parcela do iptu)$/);
+  const imed = v(/^imediacoes$/) || "";
+  const seguro = imed.match(/seguro\s+inc[eê]ndio\s*R?\$?\s*([\d.,]+)/i);
+  f.seguro_incendio = seguro ? numeroBr(seguro[1]) : null;
+
+  // ---- documentação
+  f.inscricao_iptu = v(/^inscricao do iptu$/, (s) => /^[\d./-]+$/.test(s));
+  f.matricula = v(/^matricula reg ?imoveis$/, (s) => /\d/.test(s) && E_TEXTO(s));
+  f.zona_registro = v(/^zona reg ?imoveis$/, (s) => /\w/.test(s) && E_TEXTO(s));
+
+  // ---- locação (só dados do contrato — nunca do locatário)
   const status = v(/^status$/);
-  if (status) f.occupancy = /desocup|vago|livre/i.test(status) ? "desocupado" : /ocup|alug/i.test(status) ? "alugado" : null;
-  f.property_bedrooms = numeroBr(v(/^n[ºo°]? ?dormitorios$/, (s) => /^\d+$/.test(s)));
-  f.property_area = numeroBr(v(/^metragem$/, (s) => /^[\d.,]+$/.test(s)));
-  f.area_total = numeroBr(v(/^2[ªa] metragem$/, (s) => /^[\d.,]+$/.test(s)));
-  f.property_parking = numeroBr(v(/^garagem$/, (s) => /^\d+$/.test(s)));
-  f.property_condo_name = v(/^nome$/);
-  f.iptu_registration = v(/^inscricao do iptu$/, (s) => /^[\d./-]+$/.test(s));
-  f.registry_number = v(/^matricula reg ?imoveis$/, (s) => /\d/.test(s) && E_TEXTO(s));
-  f.iptu_value = numeroBr(v(/^(vlr parcela iptu|parcela do iptu)$/, (s) => /^[\d.,]+$/.test(s)));
-  const aluguel = numeroBr(v(/^vlr\.? aluguel atual$/, (s) => /^[\d.,]+$/.test(s)));
-  if (aluguel) f.current_rent = aluguel;
+  f.situacao = status ? (/desocup|vago|livre/i.test(status) ? "desocupado" : /ocup|alug/i.test(status) ? "alugado" : null) : null;
+  f.aluguel_atual = nDec(/^vlr\.? aluguel atual$/);
+  f.aluguel_pretendido = nDec(/^vlr\.? alug\.? pretendido$/);
+  const vig = linha(/^vigencia$/) || "";
+  const datas = vig.replace(/\s+/g, "").match(/\d{2}\/\d{2}\/\d{4}/g) || [];
+  f.vigencia_inicio = datas[0] || null;
+  f.vigencia_fim = datas[1] || null;
+  f.prazo_contrato_meses = numeroBr((vig.match(/\((\d+)\s*mes/i) || [])[1]);
+  f.indice_reajuste = v(/^indice de reajuste$/);
+  f.periodicidade_reajuste = v(/^periodicidade reaj$/);
+  f.proximo_reajuste = data(v(/^proximo reajuste$/));
+  f.garantia = v(/^tipo fianca$/);
 
-  // condomínio: valor do último boleto (coluna "Cond" dos DOCs) > valor da consulta > valor inicial
+  // ---- DOCs: último condomínio cobrado e aluguel faturado nos meses listados
   const hCond = base.find((i) => i.s === "Cond");
-  if (hCond) {
-    const linha1 = base.filter((i) => i.p === hCond.p && i.y < hCond.y - 3 && i.y > hCond.y - 18 && Math.abs(i.x - hCond.x) < 22 && /^[\d.,]+$/.test(i.s));
-    if (linha1.length) f.condo_fee = numeroBr(linha1[0].s);
+  const hAlug = base.find((i) => i.s === "Alug.Calc");
+  if (hCond || hAlug) {
+    const comps = base.filter((i) => /^\d{2}\/\d{4}$/.test(i.s) && i.x < 60).sort((a, b) => a.p - b.p || b.y - a.y);
+    const naLinha = (c, h) => {
+      const it = base.find((i) => i.p === c.p && Math.abs(i.y - c.y) <= 3 && Math.abs(i.x - h.x) < 25 && /^[\d.,]+$/.test(i.s));
+      return it ? numeroBr(it.s) : null;
+    };
+    if (hCond && comps.length) f.condominio = naLinha(comps[0], hCond);
+    if (hAlug && comps.length) {
+      const valores = comps.map((c) => naLinha(c, hAlug)).filter((x) => x > 0);
+      if (valores.length) {
+        f.aluguel_faturado = Math.round(valores.reduce((a, b) => a + b, 0) * 100) / 100;
+        f.aluguel_faturado_meses = valores.length;
+        f.aluguel_faturado_periodo = `${comps[comps.length - 1].s} a ${comps[0].s}`;
+      }
+    }
   }
-  f.condo_fee = f.condo_fee || numeroBr(v(/^condominio$/, (s) => /^[\d.,]+$/.test(s))) || numeroBr(v(/^vlr cond\.? inicial$/, (s) => /^[\d.,]+$/.test(s)));
+  f.condominio = f.condominio || nDec(/^condominio$/) || f.condominio_inicial;
+  const alugVenda = nDec(/^aluguel\/venda$/);   // consulta de imóveis
+  if (!f.aluguel_atual && alugVenda > 0) f.aluguel_atual = alugVenda;
 
-  // características: nomes entre CARACTERÍSTICAS e DOCs/OBSERVAÇÕES (ficha completa)…
+  // ---- características (ficha completa) e descrição (consulta)
   const carac = [];
   if (hCarac) {
     const fim = cab(/^DOCS$/) || cab(/^OBSERVACOES$/);
     for (const i of base) {
       if (i.p !== hCarac.p || i.y >= hCarac.y - 2 || (fim && fim.p === i.p && i.y <= fim.y + 2)) continue;
       if (/^(caracteristicas (internas|gerais)|qtde|complemento)\.?$/i.test(rotulo(i.s)) || /^[\d.,]+$/.test(i.s)) continue;
-      carac.push(i.s);
+      carac.push(frase(i.s));
     }
   }
-  // …ou as linhas "- ..." da descrição (consulta de imóveis)
-  const descricao = base.filter((i) => /^-\s+\S/.test(i.s)).sort((a, b) => a.p - b.p || b.y - a.y).map((i) => i.s.replace(/^-\s+/, "").replace(/\.$/, ""));
-  f.features = [...new Set([...carac.map(frase), ...descricao])];
+  f.caracteristicas = [...new Set(carac)];
+  f.descricao = base.filter((i) => /^-\s+\S/.test(i.s)).sort((a, b) => a.p - b.p || b.y - a.y).map((i) => i.s.replace(/^-\s+/, "").replace(/\.$/, ""));
+  const andar = [...f.caracteristicas, ...f.descricao].join(" ").match(/(\d{1,2})\s*[ºo°]\s*andar|\b(t[eé]rreo)\b/i);
+  f.andar = andar ? (andar[2] ? 0 : Number(andar[1])) : null;
 
-  // limpa vazios
   for (const k of Object.keys(f)) if (f[k] == null || f[k] === "" || (Array.isArray(f[k]) && !f[k].length)) delete f[k];
   return f;
+}
+
+/** Campos da avaliação preenchidos a partir da ficha. */
+export function fichaParaAvaliacao(f) {
+  const a = {
+    property_code: f.codigo, property_cep: f.cep, property_street: f.rua, property_complement: f.complemento,
+    property_neighborhood: f.bairro, property_city: f.cidade, property_state: f.uf, property_type: f.tipo,
+    property_condo_name: f.edificio, property_area: f.area_privativa, area_total: f.area_total,
+    property_bedrooms: f.dormitorios, property_parking: f.vagas, property_floor: f.andar,
+    occupancy: f.situacao, current_rent: f.situacao === "alugado" ? f.aluguel_atual : undefined,
+    condo_fee: f.condominio, iptu_value: f.iptu_parcela, iptu_registration: f.inscricao_iptu, registry_number: f.matricula,
+    features: [...(f.caracteristicas || []), ...(f.descricao || [])],
+  };
+  for (const k of Object.keys(a)) if (a[k] == null || a[k] === "" || (Array.isArray(a[k]) && !a[k].length)) delete a[k];
+  return a;
 }
 
 // ------------------------------------------------------------ estudo do DFImóveis
