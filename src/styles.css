@@ -363,3 +363,23 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .selo-privacidade svg { flex-shrink: 0; margin-top: 2px; }
 .leitura-ficha ul { margin: 8px 0 0; padding-left: 20px; line-height: 1.75; }
 .alerta-texto { color: #8A5A00; }
+.assinatura-previa { width: 280px; height: 110px; border: 1px dashed var(--linha); border-radius: var(--raio); display: grid; place-items: center; background: repeating-conic-gradient(#f3f3f3 0% 25%, #fff 0% 50%) 50% / 16px 16px; }
+.assinatura-previa img { max-width: 94%; max-height: 94%; object-fit: contain; }
+
+/* ---------- Aba Laudo ---------- */
+.conferencia { list-style: none; padding: 0; margin: 14px 0 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 6px 16px; }
+.conferencia li { display: flex; align-items: center; gap: 7px; font-size: 13.5px; flex-wrap: wrap; }
+.conferencia li.ok { color: var(--verde); }
+.conferencia li.falta { color: #8A5A00; }
+.conferencia li.opcional { color: var(--sub); }
+.conferencia li small { flex-basis: 100%; margin-left: 22px; color: var(--sub); font-size: 12px; }
+.conferencia-linha { display: flex; gap: 7px; align-items: flex-start; font-size: 13.5px; margin: 12px 0 0; }
+.conferencia-linha.ok { color: var(--verde); }
+.conferencia-linha.falta { color: #8A5A00; }
+.conferencia-linha svg { flex-shrink: 0; margin-top: 2px; }
+.texto-laudo { margin-top: 16px; }
+.texto-laudo .cab { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; flex-wrap: wrap; }
+.texto-laudo .cab b { color: var(--verde-escuro); font-size: 14.5px; }
+.texto-laudo .selo { font-size: 11.5px; padding: 2px 8px; border-radius: 99px; background: var(--off); color: var(--sub); border: 1px solid var(--linha); }
+.texto-laudo .selo.editado { background: #FFF6E6; color: #8A5A00; border-color: #F0DDB4; }
+.texto-laudo .textarea { line-height: 1.6; }

@@ -339,3 +339,56 @@ export function lerEstudoPortal(itens) {
   if (essenciais === 0) throw new Error("Não encontrei os indicadores no PDF. O layout do estudo pode ter mudado.");
   return e;
 }
+
+// ------------------------------------------------------------ ficha de IPTU (SEFAZ-DF)
+// "Pauta IPTU/TLP por imóvel" do site da Receita do DF.
+// Lê inscrição, endereço fiscal e o histórico ano a ano. Proprietário e CPF/CNPJ nunca são lidos.
+const COLUNAS_IPTU = [
+  [/^bc do iptu$/, "base_calculo"], [/^aliq iptu$/, "aliquota"], [/^vlr iptu$/, "iptu"], [/^% ?var iptu$/, "var_iptu"],
+  [/^bc tlp$/, "base_tlp"], [/^coef tp$/, "coef_tlp"], [/^vlr tlp$/, "tlp"], [/^% ?var tlp$/, "var_tlp"],
+];
+
+export function lerFichaIptu(itens) {
+  const tudo = itens.map((i) => i.s).join(" ");
+  if (!/pauta iptu\/tlp/i.test(tudo)) throw new Error("Este PDF não parece a Pauta IPTU/TLP da Receita do DF.");
+  const v = (re, valida) => aoLado(itens, re, valida);
+  const f = { fonte: "Receita do DF (SEFAZ-DF) · Pauta IPTU/TLP por imóvel" };
+  f.inscricao = v(/^imovel$/, (s) => /^\d{5,}$/.test(s));
+  f.endereco_fiscal = v(/^endereco$/);
+  const gerado = tudo.match(/às\s+(\d{2}:\d{2})\s*-\s*(\d{2}\/\d{2}\/\d{4})/);
+  f.emitida_em = gerado ? gerado[2] : null;
+
+  // colunas pelo cabeçalho; cada linha começa com o ano
+  const cols = [];
+  for (const it of itens) {
+    const c = COLUNAS_IPTU.find(([re]) => re.test(rotulo(it.s)));
+    if (c) cols.push({ x: it.x, chave: c[1], p: it.p });
+  }
+  const anos = itens.filter((i) => /^(19|20)\d{2}$/.test(i.s) && i.x < 80);
+  f.historico = anos.map((a) => {
+    const linha = { ano: Number(a.s) };
+    for (const it of itens.filter((i) => i.p === a.p && Math.abs(i.y - a.y) <= 3 && i.x > a.x + 10)) {
+      const col = cols.filter((c) => c.p === a.p).sort((c1, c2) => Math.abs(c1.x - it.x) - Math.abs(c2.x - it.x))[0];
+      if (col && Math.abs(col.x - it.x) < 35) linha[col.chave] = numeroBr(it.s);
+    }
+    return linha;
+  }).filter((l) => l.base_calculo != null).sort((a, b) => b.ano - a.ano);
+
+  if (!f.historico.length) throw new Error("Não encontrei a tabela de valores do IPTU no PDF.");
+  const atual = f.historico[0];
+  f.ano = atual.ano;
+  f.valor_venal = atual.base_calculo;
+  f.aliquota = atual.aliquota;
+  f.iptu_anual = atual.iptu;
+  f.tlp_anual = atual.tlp;
+  // mudança de alíquota recente (ex.: reclassificação de uso) vale nota no laudo
+  const anterior = f.historico[1];
+  if (anterior && anterior.aliquota !== atual.aliquota)
+    f.mudanca_aliquota = { de: anterior.aliquota, para: atual.aliquota, ano: atual.ano };
+  // valorização do valor venal em 5 anos
+  const cinco = f.historico.find((h) => h.ano === atual.ano - 5);
+  if (cinco?.base_calculo) f.variacao_venal_5a = Math.round(((atual.base_calculo / cinco.base_calculo) - 1) * 1000) / 10;
+
+  for (const k of Object.keys(f)) if (f[k] == null) delete f[k];
+  return f;
+}
