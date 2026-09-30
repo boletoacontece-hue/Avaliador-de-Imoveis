@@ -65,7 +65,7 @@ export default function TabLaudo({ f, set, comps, salvarAntes }) {
     setErro(""); setGerando("ia");
     try {
       if (!(await salvarAntes())) throw new Error("Salve as alterações pendentes antes.");
-      const { data, error } = await supabase.functions.invoke("gerar-estrategia", { body: { evaluation_id: f.id, modo: "laudo", tipo, base: Object.fromEntries(secoes.map(([k]) => [k, (editados[k] || "").trim() || padrao[k] || ""]).filter(([, v]) => v)) } });
+      const { data, error } = await supabase.functions.invoke("gerar-estrategia", { body: { evaluation_id: f.id, modo: "laudo", tipo, homogeneizado: !!f.homogenization?.usarNoLaudo, base: Object.fromEntries(secoes.map(([k]) => [k, (editados[k] || "").trim() || padrao[k] || ""]).filter(([, v]) => v)) } });
       if (error) {
         let msg = error.message;
         try { msg = (await error.context.json()).erro || msg; } catch { /* sem corpo */ }

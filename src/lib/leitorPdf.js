@@ -392,3 +392,28 @@ export function lerFichaIptu(itens) {
   for (const k of Object.keys(f)) if (f[k] == null) delete f[k];
   return f;
 }
+
+// ------------------------------------------------------------ PDF → imagens (para leitura por IA)
+// Certidões costumam ser escaneadas (sem texto). Cada página vira um JPEG comprimido:
+// o envio fica leve (~200 KB por página) e funciona para PDF escaneado ou digital.
+export async function paginasComoImagens(arquivo, { maxPaginas = 12, larguraMax = 1150, qualidade = 0.72 } = {}) {
+  const pdf = await pdfjs();
+  const dados = new Uint8Array(await arquivo.arrayBuffer());
+  const doc = await pdf.getDocument({ data: dados, isEvalSupported: false }).promise;
+  const total = doc.numPages;
+  const paginas = [];
+  for (let p = 1; p <= Math.min(total, maxPaginas); p++) {
+    const pagina = await doc.getPage(p);
+    const base = pagina.getViewport({ scale: 1 });
+    const escala = Math.min(2.2, larguraMax / base.width);
+    const vp = pagina.getViewport({ scale: escala });
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.round(vp.width); canvas.height = Math.round(vp.height);
+    const ctx = canvas.getContext("2d");
+    ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, canvas.width, canvas.height);
+    await pagina.render({ canvasContext: ctx, viewport: vp }).promise;
+    paginas.push(canvas.toDataURL("image/jpeg", qualidade).split(",")[1]);
+  }
+  await doc.destroy();
+  return { paginas, total, cortado: total > maxPaginas };
+}

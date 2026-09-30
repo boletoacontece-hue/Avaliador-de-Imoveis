@@ -11,6 +11,8 @@ import m500 from "./fontes/IBMPlexMono-Medium.ttf?url";
 import { EMPRESA } from "../config/empresa";
 import { brlDec, num, precoM2 } from "../lib/format";
 import { porExtenso } from "../lib/extenso";
+import { homogeneizacaoDoLaudo } from "../lib/textosLaudo";
+import { ROMANO } from "../lib/homogeneizacao";
 
 Font.register({ family: "Poppins", fonts: [
   { src: p400 }, { src: p400i, fontStyle: "italic" }, { src: p500, fontWeight: 500 }, { src: p600, fontWeight: 600 }, { src: p700, fontWeight: 700 },
@@ -180,6 +182,60 @@ function TabelaAmostras({ comps, tipo }) {
   );
 }
 
+const f3 = (v) => (v == null ? "—" : v.toFixed(3).replace(".", ","));
+const COLS_H = [["#", 0.35], ["R$/m² (anúncio)", 1.25], ["Oferta", 0.8], ["Área", 0.8], ["Vagas/qtos", 0.95], ["Qualitativos", 1], ["Conjunto", 0.9], ["R$/m² homog.", 1.25], ["Situação", 1.4]];
+function TabelaHomogeneizacao({ av, comps }) {
+  const r = homogeneizacaoDoLaudo(av, comps);
+  if (!r) return null;
+  const e = r.estatistica, m = r.modelo;
+  const origemArea = m?.expoenteArea != null ? `calculado a partir das próprias amostras (expoente ${m.expoenteArea.toFixed(3).replace(".", ",")})`
+    : r.config.metodoArea === "nenhum" ? "sem ajuste de área" : "fórmula de Abunahman (expoente 1/4 até 30% de diferença, 1/8 de 30% a 150%)";
+  return (
+    <View style={s.secao}>
+      <View wrap={false}>
+        <Text style={s.subtitulo}>Homogeneização por fatores (ABNT NBR 14653-2)</Text>
+        <Text style={[s.nota, { marginBottom: 4 }]}>
+          Fator oferta {Number(r.config.fatorOferta).toFixed(2).replace(".", ",")} para anúncios; fator área {origemArea}
+          {m?.porVaga != null ? `; vagas ${(m.porVaga * 100).toFixed(1).replace(".", ",")}% por vaga, calculado a partir das amostras` : ""}
+          {m?.porQuarto != null ? `; quartos ${(m.porQuarto * 100).toFixed(1).replace(".", ",")}% por quarto` : ""}; localização, padrão e conservação por análise do avaliador. Saneamento: ±30% da média.
+        </Text>
+      </View>
+      <View style={s.tabela}>
+        <View style={s.tr} fixed>
+          {COLS_H.map(([t, fl]) => <Text key={t} style={[s.th, { flex: fl, textAlign: t === "#" || t === "Situação" ? "left" : "right", fontSize: 7.2 }]}>{t}</Text>)}
+        </View>
+        {r.linhas.map((l, i) => {
+          const q = l.fatores.localizacao * l.fatores.padrao * l.fatores.conservacao;
+          const cel = (v, fl, al = "right") => <Text style={[al === "right" ? s.tdNum : s.td, { flex: fl, fontSize: 7.4, padding: 4, textAlign: al }]}>{v}</Text>;
+          return (
+            <View key={l.id} style={[s.tr, i === r.linhas.length - 1 && { borderBottomWidth: 0 }, l.status !== "usada" && { opacity: 0.55 }]} wrap={false}>
+              {cel(i + 1, COLS_H[0][1], "left")}{cel(num(Math.round(l.vu)), COLS_H[1][1])}{cel(f3(l.fatores.oferta), COLS_H[2][1])}
+              {cel(f3(l.fatores.area), COLS_H[3][1])}{cel(f3(l.fatores.vagas * l.fatores.quartos), COLS_H[4][1])}{cel(f3(q), COLS_H[5][1])}
+              {cel(f3(l.conjunto), COLS_H[6][1])}{cel(l.vh ? num(Math.round(l.vh)) : "—", COLS_H[7][1])}
+              {cel(l.status === "usada" ? "usada" : l.status.replace("saneamento: ", "descartada: "), COLS_H[8][1], "left")}
+            </View>
+          );
+        })}
+      </View>
+      <View style={s.tabela} wrap={false}>
+        {[
+          ["Amostras usadas após o saneamento", `${e.n} de ${r.linhas.length}`],
+          ["Valor unitário médio homogeneizado", `R$ ${num(Math.round(e.valorUnitario))}/m²`],
+          ["Coeficiente de variação", `${(e.cv * 100).toFixed(1).replace(".", ",")}%`],
+          ["Intervalo de confiança de 80% (t de Student)", `R$ ${num(Math.round(e.ic[0]))} a R$ ${num(Math.round(e.ic[1]))}/m²`],
+          ["Valor estimado (média × área)", brlDec(e.valorTotal)],
+          ["Campo de arbítrio (±15%)", `${brlDec(e.arbitrio[0])} a ${brlDec(e.arbitrio[1])}`],
+          ["Grau de precisão · grau de fundamentação", `${ROMANO[e.grauPrecisao]} · ${ROMANO[e.grauFundamentacao]}`],
+        ].map(([rot, v], i, arr) => (
+          <View key={rot} style={[s.tr, i === arr.length - 1 && { borderBottomWidth: 0 }]}>
+            <Text style={[s.td, { flex: 3 }]}>{rot}</Text><Text style={[s.tdNum, { flex: 2 }]}>{v}</Text>
+          </View>
+        ))}
+      </View>
+    </View>
+  );
+}
+
 function Referencias({ av }) {
   const e = av.portal_study, t = av.tax_sheet;
   const itens = [];
@@ -218,6 +274,7 @@ function LaudoCliente(p) {
       <Secao titulo="Imóvel avaliado" texto={endereco} destaque />
       <Secao titulo="Descrição do imóvel" texto={textos.descricao} />
       <Secao titulo="Ocupação" texto={textos.ocupacao} />
+      <Secao titulo="Situação documental" texto={textos.documentacao} />
       <SecaoLonga titulo="Parâmetros de avaliação" texto={textos.parametros} />
       <CardsValor av={av} />
       <Secao titulo="Valor de mercado" texto={textos.valor_mercado} />
@@ -257,7 +314,7 @@ function LaudoCompleto(p) {
         <View style={{ marginTop: 10 }}>
           <Text style={{ fontSize: 9.5 }}><Text style={{ fontWeight: 700, color: VERDE }}>ACONTECE</Text> ASSESSORIA E PLANEJAMENTO IMOBILIÁRIO LTDA</Text>
           <Text style={{ fontSize: 9 }}>CNPJ {EMPRESA.cnpj}   <Text style={{ fontWeight: 700, color: VERDE }}>{EMPRESA.creciPj}</Text></Text>
-          {EMPRESA.unidades.map(([u, e]) => <Text key={u} style={{ fontSize: 8.5, marginTop: 3 }}><Text style={{ fontWeight: 700, color: "#3F5E3F" }}>{u}</Text> — {e}</Text>)}
+          {EMPRESA.unidades.map((u) => <Text key={u.regiao} style={{ fontSize: 8.5, marginTop: 3 }}><Text style={{ fontWeight: 700, color: "#3F5E3F" }}>{u.tipo === "Matriz" ? "SEDE" : "FILIAL"} {u.regiao.toUpperCase()}</Text> — {u.endereco}, {u.edificio}, Brasília – DF</Text>)}
         </View>
         <Assinatura corretor={corretor} assinatura={assinatura} />
         <Rodape corretor={corretor} />
@@ -268,6 +325,8 @@ function LaudoCompleto(p) {
         <Secao titulo="Imóvel avaliado" texto={endereco} destaque />
         <Secao titulo="Descrição do imóvel" texto={textos.descricao} />
         <Secao titulo="Ocupação" texto={textos.ocupacao} />
+        <Secao titulo="Situação documental" texto={textos.documentacao} />
+      <Secao titulo="Situação documental" texto={textos.documentacao} />
         <SecaoLonga titulo="Parâmetros de avaliação" texto={textos.parametros} />
         {comps.some((c) => c.price > 0) && (
           <View style={s.secao}>
@@ -275,6 +334,7 @@ function LaudoCompleto(p) {
             <TabelaAmostras comps={comps} tipo={av.evaluation_type} />
           </View>
         )}
+        <TabelaHomogeneizacao av={av} comps={comps} />
         <Referencias av={av} />
         <View break={false}>
           <CardsValor av={av} />

@@ -2,11 +2,21 @@
 // O corretor pode editar qualquer seção ou pedir para a IA reescrever; em branco, vale o padrão.
 import { brlDec as brl, num, precoM2, mediana, montarEndereco } from "./format";
 import { porExtenso } from "./extenso";
+import { homogeneizar, QUALITATIVOS, ROMANO } from "./homogeneizacao";
+
+/** Resultado da homogeneização, se o corretor marcou "incluir no laudo". */
+export function homogeneizacaoDoLaudo(av, comps) {
+  const h = av.homogenization;
+  if (!h?.usarNoLaudo) return null;
+  const r = homogeneizar({ area: av.property_area, vagas: av.property_parking, quartos: av.property_bedrooms }, comps, h.ajustes || {}, h.config || {});
+  return r.estatistica ? r : null;
+}
 
 export const SECOES_LAUDO = [
   ["apresentacao", "Apresentação", ["completo", "ptam"]],
   ["descricao", "Descrição do imóvel", ["cliente", "completo", "ptam"]],
   ["ocupacao", "Ocupação", ["cliente", "completo", "ptam"]],
+  ["documentacao", "Situação documental", ["cliente", "completo", "ptam"]],
   ["parametros", "Parâmetros de avaliação", ["cliente", "completo", "ptam"]],
   ["valor_mercado", "Valor de mercado", ["cliente", "completo", "ptam"]],
   ["valor_oferta", "Valor estratégico de oferta", ["cliente", "completo"]],
@@ -64,6 +74,23 @@ export function textosPadrao(av, comps = []) {
     ocupacao = "Imóvel atualmente ocupado pelo proprietário.";
   } else ocupacao = "";
 
+  // ---- situação documental (certidão + IPTU) — só dados do imóvel, nada sobre pessoas
+  const cert = av.registry_sheet;
+  let documentacao = "";
+  if (cert?.matricula) {
+    const im = cert.imovel || {};
+    const areas = [im.area_privativa != null && `área privativa de ${num(im.area_privativa)} m²`, im.area_comum != null && `área comum de ${num(im.area_comum)} m²`,
+      im.area_total != null && `área total de ${num(im.area_total)} m²`, im.fracao_ideal && `fração ideal de ${im.fracao_ideal}`].filter(Boolean);
+    documentacao = `Imóvel registrado sob a matrícula nº ${cert.matricula}${cert.cartorio ? ` do ${cert.cartorio}` : ""}${areas.length ? `, com ${lista(areas)}` : ""}.`;
+    const vigentes = (cert.onus || []).filter((o) => o.situacao !== "cancelado");
+    if (cert.situacao_juridica?.livre && !vigentes.length) {
+      documentacao += ` Conforme certidão de inteiro teor, ônus e situação jurídica${cert.emitida_em ? ` emitida em ${cert.emitida_em}` : ""}, não constam ônus, restrições ou registro de citação de ações reais ou pessoais reipersecutórias sobre o imóvel${cert.situacao_juridica.locacao_registrada === false ? ", nem registro de locação" : ""}.`;
+    } else if (vigentes.length) {
+      documentacao += ` A certidão${cert.emitida_em ? ` emitida em ${cert.emitida_em}` : ""} aponta ${vigentes.length === 1 ? "o seguinte ônus vigente" : "os seguintes ônus vigentes"}: ${lista(vigentes.map((o) => `${o.tipo}${o.ato ? ` (${o.ato})` : ""}`))}, que ${vigentes.length === 1 ? "deverá ser baixado" : "deverão ser baixados"} ou equacionado${vigentes.length === 1 ? "" : "s"} na negociação.`;
+    }
+  }
+  if (iptu.inscricao) documentacao += `${documentacao ? " " : ""}Inscrição imobiliária no IPTU nº ${iptu.inscricao}.`;
+
   // ---- parâmetros
   const partesParam = [];
   partesParam.push(`O estudo de mercado considerou imóveis semelhantes na mesma região (${bairro}), com amostragem de ${m2s.length || "diversas"} ofertas ativas.`);
@@ -74,13 +101,21 @@ export function textosPadrao(av, comps = []) {
     partesParam.push("A análise do ciclo de liquidez local indica tempo médio de exposição entre 90 e 180 dias, dependendo diretamente da precificação inicial.");
   }
   partesParam.push(`Diante disso, o posicionamento de ${verbo} foi definido de forma competitiva para maximizar a atratividade do ativo, reduzir o tempo de absorção, estimular visitas e propiciar propostas efetivas.`);
+  const hom = homogeneizacaoDoLaudo(av, comps), he = hom?.estatistica;
+  if (he) {
+    const usados = ["oferta", "área"];
+    if (hom.modelo?.porVaga != null) usados.push("vagas");
+    if (hom.modelo?.porQuarto != null) usados.push("quartos");
+    QUALITATIVOS.forEach(([k, rot]) => { if (hom.linhas.some((l) => l.status === "usada" && Number(l.aj[k] || 0) !== 0)) usados.push(rot.split(" ")[0].toLowerCase()); });
+    partesParam.push(`As amostras foram homogeneizadas por fatores (${lista(usados)}), conforme a ABNT NBR 14653-2. Após o saneamento, ${he.n} amostras resultaram em valor unitário médio de ${m2Txt(he.valorUnitario)}, com intervalo de confiança de 80% entre ${m2Txt(he.ic[0])} e ${m2Txt(he.ic[1])} (grau de precisão ${ROMANO[he.grauPrecisao]} e grau de fundamentação ${ROMANO[he.grauFundamentacao]}).`);
+  }
   if (iptu.valor_venal) partesParam.push(`Como referência fiscal, o valor venal atribuído pela Receita do DF para ${iptu.ano} é de ${brl(iptu.valor_venal)} (base de cálculo do IPTU), que não se confunde com o valor de mercado.`);
   const parametros = partesParam.join(" ");
 
   // ---- valores
   const baseM2 = area ? ` (considerando a área privativa de ${num(area)} m²)` : "";
   const valor_mercado = mercado
-    ? `Definido tecnicamente em ${brl(mercado)} (${porExtenso(mercado)}), correspondendo a aproximadamente ${m2Txt(precoM2(mercado, area)) || "—"}${baseM2}. Este montante reflete o ponto de equilíbrio da análise comparativa das ofertas de imóveis semelhantes na região${av.occupancy === "alugado" && !aluguel ? ", ponderando a renda atual de locação" : ""}, e representa a real expectativa de liquidez para o cenário atual.`
+    ? `Definido tecnicamente em ${brl(mercado)} (${porExtenso(mercado)}), correspondendo a aproximadamente ${m2Txt(precoM2(mercado, area)) || "—"}${baseM2}. Este montante reflete ${he ? `o valor central da homogeneização das amostras semelhantes na região${mercado >= he.arbitrio[0] && mercado <= he.arbitrio[1] ? ", dentro do campo de arbítrio admitido pela norma" : ""}` : "o ponto de equilíbrio da análise comparativa das ofertas de imóveis semelhantes na região"}${av.occupancy === "alugado" && !aluguel ? ", ponderando a renda atual de locação" : ""}, e representa a real expectativa de liquidez para o cenário atual.`
     : "";
   const valor_oferta = oferta
     ? `O valor estimado de anúncio é de ${brl(oferta)} (${porExtenso(oferta)})${area ? `, correspondendo a ${m2Txt(precoM2(oferta, area))}` : ""}, o teto para iniciar os trabalhos de ${verbo}, adequado para comercialização em prazo médio (até ${prazo} dias). Este valor situa-se no limite superior admissível de mercado, fundamentado na elasticidade da demanda, conferindo a necessária margem de negociação sem depreciação do valor de mercado do ativo.`
@@ -90,11 +125,16 @@ export function textosPadrao(av, comps = []) {
   const obs = [`Conforme a praxe do mercado imobiliário local, ${aluguel ? "interessados" : "compradores"} tendem a pleitear margens de desconto entre ${num(dMin)}% e ${num(dMax)}%. Dessa forma, estima-se que o valor final de fechamento orbitará com uma oscilação de aproximadamente ${num(Math.round((dMin + dMax) / 2))}% em relação ao preço de anúncio estratégico${mercado ? ", aproximando-se do valor técnico de avaliação" : ""}.`,
     "Flutuações intencionais no valor anunciado (em até 5% para mais ou para menos) podem ser utilizadas como gatilho estratégico nos portais imobiliários para reposicionamento e destaque do anúncio, com impacto direto no prazo de exposição."];
   if (av.occupancy === "alugado" && !aluguel) obs.push("O rendimento atual de locação constitui um atrativo adicional para investidores focados em retorno imediato.");
+  // pontos documentais relevantes ao negócio (a partir dos dados estruturados da certidão; nada sobre pessoas)
+  if (cert && av.occupancy === "alugado" && !aluguel && cert.situacao_juridica?.locacao_registrada === false)
+    obs.push("Como a locação não está registrada na matrícula, o adquirente poderá optar por manter o contrato ou denunciá-lo, concedendo 90 dias para desocupação (Lei 8.245/91, art. 8º). Antes da venda a terceiros, o locatário deve ser notificado para exercer seu direito de preferência (art. 27).");
+  if (cert?.titularidade?.quantidade_titulares > 1 && !aluguel)
+    obs.push(`O imóvel pertence a ${cert.titularidade.quantidade_titulares} titulares${cert.titularidade.fracoes ? ` (${cert.titularidade.fracoes})` : ""}; a venda exigirá a participação de todos.`);
   if (iptu.mudanca_aliquota) obs.push(`A alíquota do IPTU passou de ${pct(iptu.mudanca_aliquota.de)} para ${pct(iptu.mudanca_aliquota.para)} em ${iptu.mudanca_aliquota.ano}, o que reduz o custo de manutenção do imóvel.`);
 
   return {
     apresentacao: "Este estudo foi desenvolvido com o objetivo de posicionar o imóvel de forma estratégica dentro do mercado, buscando não apenas determinar um valor justo, mas definir a melhor forma de venda. Mais do que uma avaliação tradicional, este material visa traduzir como o mercado pensa, reage e decide.",
-    descricao, ocupacao, parametros, valor_mercado, valor_oferta,
+    descricao, ocupacao, documentacao, parametros, valor_mercado, valor_oferta,
     observacoes: obs.join("\n\n"),
     comercial: "Temos grande interesse em trabalhar para vocês, cuidar de todos os processos e dos negócios imobiliários e, para isso, divulgamos seu imóvel nos maiores e melhores veículos de vendas no DF e no Brasil, como os portais Wimóveis, DFImóveis, Lugar Certo, OLX e ZAP Imóveis, e ainda contamos com convênios com cartórios e toda a assessoria jurídica para fazer o melhor e mais seguro negócio. Oferecemos soluções. Isso só é possível porque nossas ações começam com você e seus interesses. Se você acredita, “ACONTECE”.",
   };

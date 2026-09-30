@@ -1,6 +1,6 @@
 import React, { Suspense, lazy, useState } from "react";
 import { Home, Ruler, BedDouble, Bath, Car, Sparkles, Layers, ArrowUpDown, MapPin, Building2,
-  CheckCircle2, AlertCircle, ExternalLink, ImageOff, MessageCircle, BadgeCheck, Award } from "lucide-react";
+  CheckCircle2, AlertCircle, ExternalLink, ImageOff, MessageCircle, BadgeCheck, Medal, Crown } from "lucide-react";
 import { Reveal, Stagger, StaggerItem, AnimatedCounter } from "../components/Motion";
 import LazyMap from "../components/LazyMap";
 import { EMPRESA } from "../config/empresa";
@@ -24,7 +24,6 @@ export function QuemSomos({ corretor }) {
           <p className="pub-lead" style={{ marginBottom: 0 }}>{EMPRESA.apresentacao}</p>
           <div className="credenciais">
             <span className="credencial"><BadgeCheck size={15} /> {EMPRESA.creci}</span>
-            {EMPRESA.rede && <span className="credencial"><Award size={15} /> {EMPRESA.rede}</span>}
             {corretor?.creci_number && <span className="credencial"><BadgeCheck size={15} /> Corretor CRECI {corretor.creci_number}</span>}
             {corretor?.cnai_number && <span className="credencial"><BadgeCheck size={15} /> CNAI {corretor.cnai_number}</span>}
           </div>
@@ -34,6 +33,40 @@ export function QuemSomos({ corretor }) {
             <div key={s.rotulo}><b><AnimatedCounter valor={s.valor} prefixo={s.prefixo} sufixo={s.sufixo} /></b><span>{s.rotulo}</span></div>
           ))}
         </div>
+      </div>
+
+      <div className="pub-in">
+        <h3 className="quem-sub">Onde atuamos</h3>
+        <Stagger className="regioes">
+          {EMPRESA.unidades.map((u) => (
+            <StaggerItem key={u.regiao} className={`regiao ${u.tipo === "Matriz" ? "matriz" : ""}`}>
+              <div className="regiao-topo"><span>{u.tipo}</span><b>{u.regiao}</b></div>
+              <div className="regiao-corpo">
+                <MapPin size={22} />
+                <p>{u.endereco}<br />{u.edificio}</p>
+                {u.detalhe && <small>{u.detalhe}</small>}
+              </div>
+            </StaggerItem>
+          ))}
+        </Stagger>
+
+        {EMPRESA.reconhecimentos?.length > 0 && (
+          <>
+            <h3 className="quem-sub">Reconhecimento</h3>
+            <Stagger className="premios">
+              {EMPRESA.reconhecimentos.map((r) => (
+                <StaggerItem key={r.titulo} className="premio">
+                  <span className="premio-icone">{r.icone === "coroa" ? <Crown size={22} /> : <Medal size={22} />}</span>
+                  <div className="premio-texto"><b>{r.titulo}</b><span>{r.entidade}</span></div>
+                  <span className="premio-periodo">{r.periodo}</span>
+                </StaggerItem>
+              ))}
+              {EMPRESA.fraseReconhecimento && (
+                <StaggerItem className="premio premio-frase"><span>“{EMPRESA.fraseReconhecimento}”</span></StaggerItem>
+              )}
+            </Stagger>
+          </>
+        )}
       </div>
     </Reveal>
   );
