@@ -426,3 +426,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .tabela-consolidacao td:nth-child(n+2):nth-child(-n+4) { min-width: 150px; }
 .ok-texto { color: var(--verde); }
 .ok-texto svg, .alerta-texto svg { vertical-align: -2px; }
+.fontes-ficha { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; margin-top: 6px; }
+.fonte-chip { display: inline-flex; align-items: center; gap: 6px; background: var(--verde-claro); color: var(--verde-escuro); border: 1px solid #cfe0c8; border-radius: 99px; padding: 3px 10px; font-size: 12.5px; font-weight: 500; }
+.fonte-chip button { border: 0; background: none; color: var(--verde); font-size: 15px; line-height: 1; cursor: pointer; padding: 0 2px; }
+.fonte-chip button:hover { color: #9B2C2C; }

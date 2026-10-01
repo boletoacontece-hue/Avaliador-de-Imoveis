@@ -417,3 +417,59 @@ export async function paginasComoImagens(arquivo, { maxPaginas = 12, larguraMax 
   await doc.destroy();
   return { paginas, total, cortado: total > maxPaginas };
 }
+
+// ------------------------------------------------------------ combinar fichas do Imobiliar
+// A ficha completa e a consulta de imóveis se complementam. Guardamos cada ficha lida
+// (fontes) e as edições do corretor (edicoes); os campos exibidos são a combinação:
+//  • campo nas duas fichas → vale o da ficha mais recente; a diferença fica em "conflitos"
+//  • listas (características, descrição) → somadas, sem repetir
+//  • edição manual do corretor → sempre prevalece e sobrevive a novas importações
+const META_FICHA = new Set(["fontes", "edicoes", "conflitos", "importado_em", "formato", "emitida_em"]);
+const LISTAS_FICHA = new Set(["caracteristicas", "descricao"]);
+// campos de texto livre que só mudam de grafia entre as fichas: vale o mais recente, sem alarme
+const SEM_CONFLITO = new Set(["endereco_ficha", "tipo_ficha", "classificacao"]);
+const dataNum = (s) => { const m = String(s || "").match(/(\d{2})\/(\d{2})\/(\d{4})/); return m ? +`${m[3]}${m[2]}${m[1]}` : 0; };
+const igual = (a, b) => (typeof a === "number" && typeof b === "number" ? Math.abs(a - b) < 0.005
+  : String(a).trim().toLowerCase() === String(b).trim().toLowerCase());
+export const rotuloFonte = (f) => `${f.formato || "Ficha"}${f.emitida_em ? ` de ${f.emitida_em}` : ""}`;
+
+/** Fontes de uma ficha salva (compatível com fichas salvas antes da combinação). */
+export function fontesDaFicha(ps) {
+  if (!ps) return [];
+  if (Array.isArray(ps.fontes)) return ps.fontes;
+  const dados = {};
+  for (const [k, v] of Object.entries(ps)) if (!META_FICHA.has(k)) dados[k] = v;
+  return [{ formato: ps.formato, emitida_em: ps.emitida_em, codigo: ps.codigo, importado_em: ps.importado_em, dados }];
+}
+
+export function mesclarFichas(fontes, edicoes = {}) {
+  if (!fontes?.length) return null;
+  const ordem = [...fontes].sort((a, b) => dataNum(b.emitida_em) - dataNum(a.emitida_em)); // mais recente primeiro
+  const out = {}, origem = {}, conflitos = [];
+  for (const fonte of ordem) {
+    for (const [k, v] of Object.entries(fonte.dados || {})) {
+      if (META_FICHA.has(k) || v == null || v === "" || (Array.isArray(v) && !v.length)) continue;
+      if (LISTAS_FICHA.has(k)) { out[k] = [...new Set([...(out[k] || []), ...v])]; continue; }
+      if (out[k] === undefined) { out[k] = v; origem[k] = fonte; continue; }
+      if (!SEM_CONFLITO.has(k) && !igual(out[k], v) && !conflitos.some((c) => c.campo === k))
+        conflitos.push({ campo: k, usado: out[k], usado_de: rotuloFonte(origem[k]), outro: v, outro_de: rotuloFonte(fonte) });
+    }
+  }
+  for (const [k, v] of Object.entries(edicoes || {})) out[k] = v;
+  return {
+    ...out,
+    formato: ordem.map((f) => f.formato).join(" + "),
+    emitida_em: ordem[0].emitida_em,
+    fontes: ordem, edicoes: edicoes || {},
+    conflitos: conflitos.filter((c) => !(c.campo in (edicoes || {}))),
+  };
+}
+
+/** Soma uma ficha nova às já importadas (a mesma espécie de ficha substitui a anterior). */
+export function adicionarFicha(ps, nova) {
+  const fontes = fontesDaFicha(ps).filter((f) => f.formato !== nova.formato);
+  const dados = {};
+  for (const [k, v] of Object.entries(nova)) if (!META_FICHA.has(k)) dados[k] = v;
+  fontes.push({ formato: nova.formato, emitida_em: nova.emitida_em, codigo: nova.codigo, importado_em: new Date().toISOString(), dados });
+  return mesclarFichas(fontes, ps?.edicoes || {});
+}

@@ -33,6 +33,9 @@ const GRUPOS = [
   ]],
 ];
 
+const ROTULO_CAMPO = Object.fromEntries(GRUPOS.flatMap(([, campos]) => campos.map(([k, r, tipo]) => [k, r])));
+const TIPO_CAMPO = Object.fromEntries(GRUPOS.flatMap(([, campos]) => campos.map(([k, , tipo]) => [k, tipo])));
+const mostrarValor = (k, v) => (v == null ? "—" : TIPO_CAMPO[k] === "moeda" ? brlDec(v) : typeof v === "boolean" ? (v ? "Sim" : "Não") : String(v));
 const paraData = (s) => { const m = (s || "").match(/^(\d{2})\/(\d{2})\/(\d{4})$/); return m ? new Date(+m[3], +m[2] - 1, +m[1]) : null; };
 const dias = (d) => Math.round((d - new Date(new Date().toDateString())) / 86400000);
 
@@ -42,18 +45,39 @@ export default function TabFicha({ f, set, setVarios }) {
   const [erro, setErro] = useState("");
   const [aplicar, setAplicar] = useState(null);
   const ficha = f.property_sheet;
-  const setK = (k, v) => set("property_sheet", { ...(ficha || {}), [k]: v });
+  // edição manual vira "edição" e sobrevive a novas fichas somadas
+  const setK = async (k, v) => {
+    const { fontesDaFicha, mesclarFichas } = await import("../../lib/leitorPdf");
+    set("property_sheet", mesclarFichas(fontesDaFicha(ficha), { ...(ficha?.edicoes || {}), [k]: v }));
+  };
 
-  async function ler(file) {
+  // aceita uma ou as duas fichas (completa e consulta), juntas ou em momentos diferentes
+  async function ler(arquivos) {
     setErro(""); setLendo(true);
     try {
-      const { itensDoPdf, lerFichaImobiliar, fichaParaAvaliacao: mapear } = await import("../../lib/leitorPdf");
-      const lida = { ...lerFichaImobiliar(await itensDoPdf(file)), importado_em: new Date().toISOString() };
-      set("property_sheet", lida);
-      setAplicar(mapear(lida)); // já oferece aplicar ao imóvel
+      const { itensDoPdf, lerFichaImobiliar, adicionarFicha, fichaParaAvaliacao: mapear } = await import("../../lib/leitorPdf");
+      let ps = ficha, lidas = 0;
+      for (const file of arquivos) {
+        let nova;
+        try { nova = lerFichaImobiliar(await itensDoPdf(file)); }
+        catch (e) { setErro(`${file.name}: ${e.message}`); continue; }
+        const codigoAtual = ps?.codigo;
+        if (codigoAtual && nova.codigo && nova.codigo !== codigoAtual &&
+            !window.confirm(`A ficha “${file.name}” é do imóvel código ${nova.codigo}, mas a atual é do código ${codigoAtual}.\n\nOK = substituir pela ficha nova (outro imóvel) · Cancelar = ignorar este arquivo`)) continue;
+        if (codigoAtual && nova.codigo && nova.codigo !== codigoAtual) ps = null;
+        ps = adicionarFicha(ps, nova); lidas++;
+      }
+      if (lidas) { set("property_sheet", ps); setAplicar(mapear(ps)); }
     } catch (e) { setErro(e.message || "Não consegui ler o PDF."); }
     setLendo(false);
   }
+
+  async function removerFonte(fonte) {
+    const { fontesDaFicha, mesclarFichas } = await import("../../lib/leitorPdf");
+    const resto = fontesDaFicha(ficha).filter((x) => x !== fonte && !(x.formato === fonte.formato && x.emitida_em === fonte.emitida_em));
+    set("property_sheet", resto.length ? mesclarFichas(resto, ficha.edicoes || {}) : null);
+  }
+
   async function reaplicar() {
     const { fichaParaAvaliacao: mapear } = await import("../../lib/leitorPdf");
     setAplicar(mapear(ficha));
@@ -88,18 +112,18 @@ export default function TabFicha({ f, set, setVarios }) {
           <div>
             <b><FileUp size={17} /> Ficha do imóvel (Imobiliar)</b>
             <span className="dica">
-              Importe o PDF da ficha (completa ou consulta de imóveis). Tudo o que o laudo usa sobre o imóvel sai daqui: identificação,
-              áreas, custos, documentação, contrato de locação e aluguel faturado.
+              Importe a ficha completa, a consulta de imóveis ou as duas (pode selecionar os dois PDFs de uma vez, ou somar depois).
+              As fichas se completam: tudo o que o laudo usa sobre o imóvel sai daqui — identificação, áreas, custos, documentação, contrato de locação e aluguel faturado.
             </span>
             <span className="selo-privacidade"><ShieldCheck size={14} /> O PDF é lido no navegador e não é enviado. Nomes, CPF, RG, contatos e contas de proprietário e inquilino nunca são lidos.</span>
           </div>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
             <button type="button" className="btn btn-sec" disabled={lendo} onClick={() => input.current?.click()}>
-              {lendo ? "Lendo…" : ficha ? "Importar outra ficha" : "Importar ficha (PDF)"}
+              {lendo ? "Lendo…" : ficha ? "Adicionar ficha" : "Importar ficha (PDF)"}
             </button>
           </div>
-          <input ref={input} type="file" accept="application/pdf,.pdf" hidden
-            onChange={(ev) => { const a = ev.target.files?.[0]; ev.target.value = ""; if (a) ler(a); }} />
+          <input ref={input} type="file" accept="application/pdf,.pdf" hidden multiple
+            onChange={(ev) => { const a = [...(ev.target.files || [])]; ev.target.value = ""; if (a.length) ler(a); }} />
         </div>
         {erro && <div className="erro-msg" style={{ marginTop: 10 }}>{erro}</div>}
       </section>
@@ -117,10 +141,17 @@ export default function TabFicha({ f, set, setVarios }) {
           <section className="painel">
             <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap", alignItems: "flex-start" }}>
               <div>
-                <h2>{ficha.formato || "Ficha do imóvel"}{ficha.codigo ? ` · código ${ficha.codigo}` : ""}</h2>
-                <p className="dica" style={{ margin: 0 }}>
-                  {ficha.emitida_em ? `Emitida no Imobiliar em ${ficha.emitida_em}. ` : ""}Confira e ajuste o que for preciso; os dados ficam salvos na avaliação e não vão para o link do cliente.
-                </p>
+                <h2>Ficha do imóvel{ficha.codigo ? ` · código ${ficha.codigo}` : ""}</h2>
+                <div className="fontes-ficha">
+                  {(ficha.fontes || [{ formato: ficha.formato, emitida_em: ficha.emitida_em }]).map((fo) => (
+                    <span key={`${fo.formato}${fo.emitida_em}`} className="fonte-chip">
+                      {fo.formato}{fo.emitida_em ? ` · ${fo.emitida_em}` : ""}
+                      {ficha.fontes?.length > 1 && <button type="button" aria-label={`Remover ${fo.formato}`} onClick={() => removerFonte(fo)}>×</button>}
+                    </span>
+                  ))}
+                  {(ficha.fontes?.length || 1) < 2 && <span className="dica">Pode somar a {/consulta/i.test(ficha.formato || "") ? "ficha completa" : "consulta de imóveis"} em “Adicionar ficha”.</span>}
+                </div>
+                <p className="dica" style={{ margin: "6px 0 0" }}>Confira e ajuste o que for preciso; os dados ficam salvos na avaliação e não vão para o link do cliente.</p>
               </div>
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                 <button type="button" className="btn" onClick={reaplicar}><ClipboardCheck size={16} /> Aplicar ao imóvel</button>
@@ -130,6 +161,28 @@ export default function TabFicha({ f, set, setVarios }) {
               </div>
             </div>
           </section>
+
+          {ficha.conflitos?.length > 0 && (
+            <section className="painel">
+              <h2>Diferenças entre as fichas</h2>
+              <p className="dica">Os dados abaixo vieram diferentes nas duas fichas. Por padrão vale o da ficha mais recente; troque se for o caso.</p>
+              <div className="rolagem-x">
+                <table className="tabela">
+                  <thead><tr><th>Campo</th><th>Em uso</th><th>Na outra ficha</th><th /></tr></thead>
+                  <tbody>
+                    {ficha.conflitos.map((c) => (
+                      <tr key={c.campo}>
+                        <td><b>{ROTULO_CAMPO[c.campo] || c.campo}</b></td>
+                        <td>{mostrarValor(c.campo, c.usado)}<small className="dica" style={{ display: "block" }}>{c.usado_de}</small></td>
+                        <td>{mostrarValor(c.campo, c.outro)}<small className="dica" style={{ display: "block" }}>{c.outro_de}</small></td>
+                        <td><button type="button" className="btn btn-ghost btn-sm" onClick={() => setK(c.campo, c.outro)}>Usar este</button></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          )}
 
           {(ficha.situacao === "alugado" || ficha.aluguel_atual) && (
             <section className="painel leitura-ficha">
