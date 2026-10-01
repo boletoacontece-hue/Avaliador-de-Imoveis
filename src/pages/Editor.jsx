@@ -15,6 +15,7 @@ import SecaoIptu from "../components/editor/SecaoIptu";
 import SecaoCertidao from "../components/editor/SecaoCertidao";
 import TabLaudo from "../components/editor/TabLaudo";
 import TabFatores from "../components/editor/TabFatores";
+import TabVistoria from "../components/editor/TabVistoria";
 
 const CAMPOS_EVAL = ["title", "client_name", "property_cep", "property_street", "property_number", "property_complement",
   "property_neighborhood", "property_city", "property_state", "property_condo_name", "property_type", "property_area",
@@ -24,7 +25,7 @@ const CAMPOS_EVAL = ["title", "client_name", "property_cep", "property_street", 
   // laudos (0003)
   "report_type", "property_code", "interested_party", "purpose", "occupancy", "current_rent", "area_total", "condo_fee",
   "iptu_value", "iptu_registration", "registry_number", "features", "market_value", "negotiation_min", "negotiation_max",
-  "target_days", "portal_study", "property_sheet", "tax_sheet", "report_texts", "homogenization", "registry_sheet"];
+  "target_days", "portal_study", "property_sheet", "tax_sheet", "report_texts", "homogenization", "registry_sheet", "inspection", "ptam"];
 const NUM_EVAL = new Set(["property_area", "property_bedrooms", "property_suites", "property_bathrooms", "property_parking",
   "property_floor", "property_latitude", "property_longitude", "suggested_value", "current_rent", "area_total", "condo_fee",
   "iptu_value", "market_value", "negotiation_min", "negotiation_max", "target_days"]);
@@ -54,7 +55,7 @@ function montarPayload(obj, campos, numericos) {
   return p;
 }
 
-const ABAS = [["imovel", "Imóvel"], ["ficha", "Documentos"], ["percepcoes", "Percepções"], ["comparativos", "Comparativos"], ["fatores", "Fatores"], ["mercado", "Mercado"], ["valor", "Valor"], ["laudo", "Laudo"]];
+const ABAS = [["imovel", "Imóvel"], ["ficha", "Documentos"], ["vistoria", "Vistoria"], ["percepcoes", "Percepções"], ["comparativos", "Comparativos"], ["fatores", "Fatores"], ["mercado", "Mercado"], ["valor", "Valor"], ["laudo", "Laudo"]];
 
 export default function Editor() {
   const { id } = useParams();
@@ -358,6 +359,7 @@ export default function Editor() {
           <SecaoCertidao f={f} set={set} setVarios={setVarios} salvarAntes={() => salvarRef.current()} /></>}
         {aba === "laudo" && <TabLaudo f={f} set={set} comps={comps} salvarAntes={() => salvarRef.current()} />}
         {aba === "fatores" && <TabFatores f={f} set={set} comps={comps} />}
+        {aba === "vistoria" && <TabVistoria f={f} set={set} atual={() => fRef.current} />}
         {aba === "mercado" && <TabMercado f={f} set={set} />}
         {aba === "valor" && <TabValor f={f} set={set} comps={comps} salvarAntes={() => salvarRef.current()} />}
 

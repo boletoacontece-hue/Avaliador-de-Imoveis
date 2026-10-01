@@ -1,4 +1,5 @@
 import React, { useRef, useState } from "react";
+import { mensagemErro } from "../../lib/versao";
 import { FileUp, Trash2, PencilLine } from "lucide-react";
 import { Campo, InputMoeda, InputNumero } from "../ui";
 import { brl, num } from "../../lib/format";
@@ -40,7 +41,7 @@ export default function TabMercado({ f, set }) {
       if (lido.finalidade && lido.finalidade !== f.evaluation_type)
         setErro(`Atenção: o estudo é de ${lido.finalidade} e esta avaliação é de ${f.evaluation_type}. Os dados foram importados mesmo assim.`);
       set("portal_study", { ...lido, importado_em: new Date().toISOString() });
-    } catch (err) { setErro(err.message || "Não consegui ler o PDF."); }
+    } catch (err) { setErro(mensagemErro(err, "Não consegui ler o PDF.")); }
     setLendo(false);
   }
 

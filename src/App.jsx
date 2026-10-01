@@ -1,4 +1,5 @@
 import React, { Suspense, lazy } from "react";
+import ErroCarregamento from "./components/ErroCarregamento";
 import { BrowserRouter, Routes, Route, Navigate, useParams, Outlet } from "react-router-dom";
 import { AuthProvider, useAuth } from "./lib/auth";
 import Shell from "./components/Shell";
@@ -22,7 +23,7 @@ function Protegido() {
   if (loading) return <Carregando />;
   if (!user) return <Navigate to="/" replace />;
   if (!membro) return <AcessoPendente />;
-  return <Shell><Suspense fallback={<Carregando />}><Outlet /></Suspense></Shell>;
+  return <Shell><ErroCarregamento><Suspense fallback={<Carregando />}><Outlet /></Suspense></ErroCarregamento></Shell>;
 }
 
 function SoGestor({ children }) {
@@ -51,6 +52,7 @@ export default function App() {
   return (
     <BrowserRouter basename={base}>
       <AuthProvider>
+        <ErroCarregamento>
         <Suspense fallback={<Carregando />}>
           <Routes>
             <Route path="/" element={<Inicio />} />
@@ -66,6 +68,7 @@ export default function App() {
             <Route path="*" element={<NaoEncontrado />} />
           </Routes>
         </Suspense>
+        </ErroCarregamento>
       </AuthProvider>
     </BrowserRouter>
   );

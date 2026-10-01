@@ -1,4 +1,5 @@
 import React, { useRef, useState } from "react";
+import { mensagemErro } from "../../lib/versao";
 import { FileUp, Trash2, CheckCircle2, AlertTriangle, ShieldCheck } from "lucide-react";
 import { brl, brlDec } from "../../lib/format";
 
@@ -19,7 +20,7 @@ export default function SecaoIptu({ f, set }) {
       const lida = { ...lerFichaIptu(await itensDoPdf(file)), importado_em: new Date().toISOString() };
       set("tax_sheet", lida);
       if (!f.iptu_registration && lida.inscricao) set("iptu_registration", lida.inscricao);
-    } catch (e) { setErro(e.message || "Não consegui ler o PDF."); }
+    } catch (e) { setErro(mensagemErro(e, "Não consegui ler o PDF.")); }
     setLendo(false);
   }
 

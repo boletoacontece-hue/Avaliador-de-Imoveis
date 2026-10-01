@@ -352,11 +352,204 @@ function LaudoCompleto(p) {
   );
 }
 
+// ------------------------------------------------------------ modelo 3: PTAM (COFECI)
+const sp = StyleSheet.create({
+  num: { fontSize: 11, fontWeight: 700, color: VERDE, marginTop: 10, marginBottom: 4 },
+  sub: { fontSize: 9.5, fontWeight: 600, color: ESCURO, marginTop: 6, marginBottom: 2 },
+  capaTitulo: { fontSize: 26, color: "#34495E", lineHeight: 1.25, marginTop: 60, letterSpacing: 1 },
+  capaSub: { fontSize: 12, color: VERDE, letterSpacing: 3, marginTop: 6, marginBottom: 30 },
+  rascunho: { position: "absolute", top: 330, left: 40, fontSize: 92, fontWeight: 700, color: "#B03A2E", opacity: 0.1, transform: "rotate(-32deg)" },
+  fotos: { flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between" },
+  foto: { width: "48.5%", marginBottom: 10 },
+  fotoImg: { width: "100%", height: 170, objectFit: "cover", borderRadius: 3 },
+  fotoLeg: { fontSize: 8, color: SUB, marginTop: 3 },
+  linhaDam: { flexDirection: "row", borderBottomWidth: 0.8, borderBottomColor: "#999", paddingVertical: 5 },
+  rotDam: { width: 150, fontSize: 9, color: SUB }, valDam: { flex: 1, fontSize: 9.5 },
+});
+
+const Rascunho = ({ ativo }) => (ativo ? <Text style={sp.rascunho} fixed>RASCUNHO</Text> : null);
+const Num = ({ n, children }) => <Text style={sp.num} minPresenceAhead={40}>{n}. {children}</Text>;
+
+function TabelaAreas({ av }) {
+  const im = av.registry_sheet?.imovel || {};
+  const linhas = [
+    ["Área privativa", im.area_privativa ?? av.property_area, im.area_privativa != null ? "matrícula" : "informada"],
+    ["Área comum", im.area_comum, "matrícula"], ["Área total", im.area_total ?? av.area_total, im.area_total != null ? "matrícula" : "ficha"],
+  ].filter(([, v]) => v != null);
+  if (!linhas.length && !im.fracao_ideal) return null;
+  return (
+    <View style={s.tabela} wrap={false}>
+      {linhas.map(([r, v, f], i) => (
+        <View key={r} style={[s.tr, i === linhas.length - 1 && !im.fracao_ideal && { borderBottomWidth: 0 }]}>
+          <Text style={[s.td, { flex: 2 }]}>{r}</Text><Text style={[s.tdNum, { flex: 1 }]}>{num(v)} m²</Text><Text style={[s.td, { flex: 1, color: SUB }]}>{f}</Text>
+        </View>
+      ))}
+      {im.fracao_ideal && <View style={[s.tr, { borderBottomWidth: 0 }]}><Text style={[s.td, { flex: 2 }]}>Fração ideal</Text><Text style={[s.tdNum, { flex: 1 }]}>{im.fracao_ideal}</Text><Text style={[s.td, { flex: 1, color: SUB }]}>matrícula</Text></View>}
+    </View>
+  );
+}
+
+function LaudoPtam(p) {
+  const { av, comps, textos, endereco, logo, corretor, assinatura, data, extra } = p;
+  const v = av.inspection || {};
+  const est = extra.homog?.estatistica;
+  const rasc = extra.faltando.length > 0;
+  const fontes = comps.filter((c) => c.price > 0).map((c, i) => [i + 1, [c.source_name, c.advertiser].filter(Boolean).join(" · "), c.source_url]).filter(([, f, u]) => f || u);
+  const legenda = (av.inspection?.ambientes || []).length;
+  return (
+    <>
+      <Page size="A4" style={s.pagina}>
+        <Fundo /><Rascunho ativo={rasc} />
+        <Topo logo={logo} invertido />
+        <Text style={sp.capaTitulo}>Parecer Técnico de{"\n"}Avaliação Mercadológica</Text>
+        <Text style={sp.capaSub}>PTAM{extra.seloNumero ? ` · SELO Nº ${extra.seloNumero}` : ""}</Text>
+        <Text style={s.capaRot}>Imóvel avaliado</Text><Text style={[s.capaVal, { color: VERDE }]}>{endereco}</Text>
+        <Text style={s.capaRot}>Solicitante</Text><Text style={s.capaVal}>{av.interested_party || "—"}</Text>
+        <Text style={s.capaRot}>Finalidade</Text><Text style={s.capaVal}>{av.purpose || (av.evaluation_type === "aluguel" ? "Apurar o valor de mercado para locação" : "Apurar o valor de mercado para venda")}</Text>
+        <Text style={s.capaRot}>Data de referência</Text><Text style={s.capaVal}>{extra.dataRef}</Text>
+        <Text style={s.capaRot}>Corretor de imóveis avaliador</Text>
+        <Text style={s.capaVal}>{corretor?.name || "—"}{corretor?.creci_number ? ` · CRECI/DF ${corretor.creci_number}` : ""}{corretor?.cnai_number ? ` · CNAI ${corretor.cnai_number}` : ""}</Text>
+        <View style={{ marginTop: 26 }}>
+          <Text style={{ fontSize: 9 }}>Elaborado sob o patrocínio de <Text style={{ fontWeight: 700, color: VERDE }}>{EMPRESA.razaoCompleta}</Text> · CNPJ {EMPRESA.cnpj} · {EMPRESA.creciPj}</Text>
+        </View>
+        {rasc && <Text style={[s.nota, { marginTop: 24, color: "#B03A2E" }]}>Rascunho: faltam {extra.faltando.join("; ")}.</Text>}
+        <Rodape corretor={corretor} />
+      </Page>
+
+      <Page size="A4" style={s.pagina}>
+        <Fundo /><Rascunho ativo={rasc} />
+        <Topo logo={logo} invertido />
+        <Num n={1}>SOLICITANTE</Num><Text style={s.paragrafo}>{av.interested_party || "—"}</Text>
+        <Num n={2}>FINALIDADE E OBJETIVO</Num>
+        <Text style={s.paragrafo}>{av.purpose || (av.evaluation_type === "aluguel" ? "Apurar o valor de mercado para locação do imóvel." : "Apurar o valor de mercado para venda do imóvel.")} O objetivo deste parecer é a determinação do valor de mercado na data de referência ({extra.dataRef}).</Text>
+        <Num n={3}>IDENTIFICAÇÃO E CARACTERIZAÇÃO DO IMÓVEL</Num>
+        <Text style={sp.sub}>3.1 Localização</Text><Text style={[s.paragrafo, s.destaqueEnd]}>{endereco}</Text>
+        <Text style={sp.sub}>3.2 Descrição</Text><Paragrafos texto={textos.descricao} />
+        {textos.documentacao && <><Text style={sp.sub}>3.3 Documentação</Text><Paragrafos texto={textos.documentacao} /></>}
+        <Text style={sp.sub}>3.4 Áreas</Text><TabelaAreas av={av} />
+        <Text style={sp.sub}>3.5 Vistoria</Text>
+        <Text style={s.paragrafo}>
+          {v.data ? `Vistoria realizada em ${extra.dataVistoria}` : "Data da vistoria não informada"}{v.acompanhante ? `, acompanhada por ${v.acompanhante}` : ""}.
+          {v.conservacao ? ` Estado de conservação: ${v.conservacao.toLowerCase()}.` : ""}{v.padrao ? ` Padrão de acabamento: ${v.padrao.toLowerCase()}.` : ""}
+          {legenda ? " Relatório fotográfico no Anexo I." : ""}
+        </Text>
+        {v.observacoes && <Paragrafos texto={v.observacoes} />}
+        {textos.ocupacao && <><Text style={sp.sub}>3.6 Ocupação</Text><Paragrafos texto={textos.ocupacao} /></>}
+
+        <Num n={4}>DIAGNÓSTICO DE MERCADO</Num><Paragrafos texto={textos.parametros} />
+        <Referencias av={av} />
+        <Num n={5}>METODOLOGIA</Num><Text style={s.paragrafo}>{extra.metodologia}</Text>
+        <Num n={6}>PESQUISA DE MERCADO</Num>
+        <TabelaAmostras comps={comps} tipo={av.evaluation_type} />
+        {fontes.length > 0 && (
+          <View style={{ marginBottom: 6 }}>
+            <Text style={sp.sub}>Fontes das amostras</Text>
+            {fontes.map(([n, f, u]) => <Text key={n} style={[s.nota, { fontStyle: "normal" }]}>{n}. {f}{u ? ` — ${u}` : ""}</Text>)}
+          </View>
+        )}
+        <Num n={7}>TRATAMENTO DAS AMOSTRAS (HOMOGENEIZAÇÃO)</Num>
+        <TabelaHomogeneizacao av={{ ...av, homogenization: { ...(av.homogenization || {}), usarNoLaudo: true } }} comps={comps} />
+        <Num n={8}>CONCLUSÃO</Num>
+        <Text style={s.paragrafo}>{extra.conclusao}</Text>
+        <CardsValor av={av} />
+        <Num n={9}>CONSIDERAÇÕES E RESSALVAS</Num>
+        {textos.observacoes && <Paragrafos texto={textos.observacoes} />}
+        {extra.ressalvas.map((r, i) => <Text key={i} style={[s.paragrafo, { fontSize: 9 }]}>• {r}</Text>)}
+
+        <View wrap={false}>
+          <Num n={10}>IDENTIFICAÇÃO DO AVALIADOR</Num>
+          <Text style={s.paragrafo}>{corretor?.name || "—"} — Corretor de Imóveis, CRECI/DF nº {corretor?.creci_number || "—"}, inscrito no Cadastro Nacional de Avaliadores Imobiliários (CNAI) sob o nº {corretor?.cnai_number || "—"}.</Text>
+          {corretor?.bio && <Text style={[s.paragrafo, { fontSize: 9 }]}>{corretor.bio}</Text>}
+          <Text style={s.data}>{EMPRESA.cidadeLaudo.replace("/DF", "")}, {extra.dataRef}.</Text>
+          <View style={{ flexDirection: "row", justifyContent: "center", alignItems: "flex-end", gap: 30, marginTop: 10 }}>
+            <Assinatura corretor={corretor} assinatura={assinatura} />
+            {extra.selo && (
+              <View style={{ alignItems: "center" }}>
+                <Image src={extra.selo} style={{ width: 110, height: 110, objectFit: "contain" }} />
+                <Text style={{ fontSize: 7.5, color: SUB }}>Selo Certificador{extra.seloNumero ? ` nº ${extra.seloNumero}` : ""}</Text>
+              </View>
+            )}
+          </View>
+        </View>
+        <Rodape corretor={corretor} />
+        <Text style={s.pag} fixed render={({ pageNumber, totalPages }) => `${pageNumber}/${totalPages}`} />
+      </Page>
+
+      {extra.fotos.length > 0 && (
+        <Page size="A4" style={s.pagina}>
+          <Fundo /><Rascunho ativo={rasc} />
+          <Topo logo={logo} invertido />
+          <Text style={sp.num}>ANEXO I — RELATÓRIO FOTOGRÁFICO</Text>
+          <Text style={[s.nota, { marginBottom: 8 }]}>Vistoria realizada em {extra.dataVistoria || "—"} · {endereco}</Text>
+          <View style={sp.fotos}>
+            {extra.fotos.map((f, i) => (
+              <View key={i} style={sp.foto} wrap={false}>
+                <Image src={f.src} style={sp.fotoImg} />
+                <Text style={sp.fotoLeg}>Foto {i + 1} — {f.ambiente}{f.legenda ? `: ${f.legenda}` : ""}</Text>
+              </View>
+            ))}
+          </View>
+          <Rodape corretor={corretor} />
+          <Text style={s.pag} fixed render={({ pageNumber, totalPages }) => `${pageNumber}/${totalPages}`} />
+        </Page>
+      )}
+
+      {extra.croqui && (
+        <Page size="A4" style={s.pagina}>
+          <Fundo /><Rascunho ativo={rasc} />
+          <Topo logo={logo} invertido />
+          <Text style={sp.num}>ANEXO II — CROQUI DE LOCALIZAÇÃO</Text>
+          <Image src={extra.croqui.dataUrl} style={{ width: "100%", height: 330, objectFit: "contain", marginTop: 6, borderWidth: 1, borderColor: LINHA }} />
+          <Text style={[s.nota, { marginTop: 6 }]}>Pino dourado com estrela = imóvel avaliado · pinos verdes numerados = amostras da pesquisa de mercado (item 6).{extra.croqui.comMapa ? " Base cartográfica © colaboradores do OpenStreetMap." : ""}</Text>
+          <View style={{ marginTop: 8 }}>
+            <Text style={[s.td, { padding: 0, marginBottom: 2 }]}>Imóvel avaliado: {endereco}</Text>
+            {comps.filter((c) => c.price > 0).map((c, i) => (c.latitude != null ? <Text key={i} style={[s.nota, { fontStyle: "normal" }]}>{i + 1}. {c.address || "—"}</Text> : null))}
+          </View>
+          <Rodape corretor={corretor} />
+          <Text style={s.pag} fixed render={({ pageNumber, totalPages }) => `${pageNumber}/${totalPages}`} />
+        </Page>
+      )}
+
+      {extra.incluirDam && (
+        <Page size="A4" style={s.pagina}>
+          <Rascunho ativo={rasc} />
+          <Text style={{ textAlign: "center", fontSize: 11, fontWeight: 700 }}>C O F E C I</Text>
+          <Text style={{ textAlign: "center", fontSize: 10, marginBottom: 14 }}>CRECI 8ª Região / DF</Text>
+          <Text style={[sp.num, { textAlign: "center", fontSize: 13 }]}>DECLARAÇÃO DE AVALIAÇÃO MERCADOLÓGICA</Text>
+          <Text style={[s.nota, { textAlign: "center", marginBottom: 14 }]}>Anexo III deste PTAM</Text>
+          {[["Nome do Corretor de Imóveis", corretor?.name], ["CPF nº", ""], ["RG nº", ""], ["CRECI nº", corretor?.creci_number], ["CNAI nº", corretor?.cnai_number], ["Endereço", ""]].map(([r, val]) => (
+            <View key={r} style={sp.linhaDam}><Text style={sp.rotDam}>{r}:</Text><Text style={sp.valDam}>{val || " "}</Text></View>
+          ))}
+          <Text style={[s.paragrafo, { marginTop: 14 }]}>Declara a emissão de PARECER TÉCNICO DE AVALIAÇÃO MERCADOLÓGICA relativo ao imóvel com as seguintes características:</Text>
+          {[["Imóvel", endereco], ["Tipo", av.property_type], ["Área privativa", av.registry_sheet?.imovel?.area_privativa ?? av.property_area ? `${num(av.registry_sheet?.imovel?.area_privativa ?? av.property_area)} m²` : ""],
+            ["Matrícula / cartório", [av.registry_sheet?.matricula || av.registry_number, av.registry_sheet?.cartorio].filter(Boolean).join(" — ")],
+            ["Por solicitação de", av.interested_party], ["Finalidade", av.purpose || (av.evaluation_type === "aluguel" ? "Valor de mercado para locação" : "Valor de mercado para venda")],
+            ["Valor de avaliação", av.market_value ? `${brlDec(av.market_value)} (${porExtenso(av.market_value)})` : ""], ["Data", extra.dataRef],
+            ["Selo Certificador nº", extra.seloNumero]].map(([r, val]) => (
+            <View key={r} style={sp.linhaDam}><Text style={sp.rotDam}>{r}:</Text><Text style={sp.valDam}>{val || " "}</Text></View>
+          ))}
+          <Text style={[s.data, { marginTop: 24 }]}>{EMPRESA.cidadeLaudo.replace("/DF", "")}, {extra.dataRef}.</Text>
+          <View style={{ alignItems: "center", marginTop: 40 }}><View style={s.assinaturaLinha} /><Text style={s.assinaturaNome}>{corretor?.name || ""}</Text><Text style={s.assinaturaDado}>Corretor de Imóveis Avaliador</Text></View>
+        </Page>
+      )}
+
+      {extra.anexos.length > 0 && (
+        <Page size="A4" style={s.pagina}>
+          <Fundo /><Topo logo={logo} invertido />
+          <Text style={sp.num}>ANEXO {extra.incluirDam ? "IV" : "III"} — DOCUMENTOS</Text>
+          {extra.anexos.map((n, i) => <Text key={i} style={s.paragrafo}>• {n}</Text>)}
+          <Text style={s.nota}>Documentos reproduzidos nas páginas seguintes.</Text>
+        </Page>
+      )}
+    </>
+  );
+}
+
 export default function LaudoDocumento(props) {
-  const titulo = `${props.av.report_type === "cliente" ? "Laudo avaliativo" : "Avaliação de imóvel urbano"} — ${props.endereco}`;
+  const titulo = `${props.av.report_type === "cliente" ? "Laudo avaliativo" : props.av.report_type === "ptam" ? "Parecer Técnico de Avaliação Mercadológica" : "Avaliação de imóvel urbano"} — ${props.endereco}`;
   return (
     <Document title={titulo} author={props.corretor?.name || EMPRESA.nome} creator="Avaliador de Imóveis · Acontece" language="pt-BR">
-      {props.av.report_type === "cliente" ? <LaudoCliente {...props} /> : <LaudoCompleto {...props} />}
+      {props.av.report_type === "cliente" ? <LaudoCliente {...props} /> : props.av.report_type === "ptam" && props.extra ? <LaudoPtam {...props} /> : <LaudoCompleto {...props} />}
     </Document>
   );
 }

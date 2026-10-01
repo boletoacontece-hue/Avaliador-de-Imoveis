@@ -1,4 +1,5 @@
 import React, { useRef, useState } from "react";
+import { mensagemErro } from "../../lib/versao";
 import { FileUp, Trash2, ClipboardCheck, ShieldCheck } from "lucide-react";
 import { Campo, InputMoeda, InputNumero } from "../ui";
 import { brl, brlDec } from "../../lib/format";
@@ -60,7 +61,7 @@ export default function TabFicha({ f, set, setVarios }) {
       for (const file of arquivos) {
         let nova;
         try { nova = lerFichaImobiliar(await itensDoPdf(file)); }
-        catch (e) { setErro(`${file.name}: ${e.message}`); continue; }
+        catch (e) { setErro(mensagemErro(e).startsWith("O Avaliador foi atualizado") ? mensagemErro(e) : `${file.name}: ${e.message}`); continue; }
         const codigoAtual = ps?.codigo;
         if (codigoAtual && nova.codigo && nova.codigo !== codigoAtual &&
             !window.confirm(`A ficha “${file.name}” é do imóvel código ${nova.codigo}, mas a atual é do código ${codigoAtual}.\n\nOK = substituir pela ficha nova (outro imóvel) · Cancelar = ignorar este arquivo`)) continue;
@@ -68,7 +69,7 @@ export default function TabFicha({ f, set, setVarios }) {
         ps = adicionarFicha(ps, nova); lidas++;
       }
       if (lidas) { set("property_sheet", ps); setAplicar(mapear(ps)); }
-    } catch (e) { setErro(e.message || "Não consegui ler o PDF."); }
+    } catch (e) { setErro(mensagemErro(e, "Não consegui ler o PDF.")); }
     setLendo(false);
   }
 

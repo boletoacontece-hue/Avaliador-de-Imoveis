@@ -1,4 +1,5 @@
 import React, { useRef, useState } from "react";
+import { mensagemErro } from "../../lib/versao";
 import { FileSearch, Trash2, ShieldCheck, ShieldAlert, AlertTriangle, Info, OctagonAlert, CheckCircle2, Lock, ClipboardCheck } from "lucide-react";
 import { supabase } from "../../lib/supabase";
 import { brlDec, num } from "../../lib/format";
@@ -41,7 +42,7 @@ export default function SecaoCertidao({ f, set, setVarios, salvarAntes }) {
       }
       if (!data?.certidao) throw new Error("A IA não devolveu os dados da certidão.");
       set("registry_sheet", { ...data.certidao, arquivo: file.name, paginas_lidas: paginas.length, paginas_total: total, importado_em: new Date().toISOString(), ...(cortado ? { aviso: `Só as primeiras ${paginas.length} de ${total} páginas foram lidas.` } : {}) });
-    } catch (e) { setErro(e.message || "Não consegui ler a certidão."); }
+    } catch (e) { setErro(mensagemErro(e, "Não consegui ler a certidão.")); }
     setEtapa("");
   }
 

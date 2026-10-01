@@ -13,7 +13,7 @@ export function homogeneizacaoDoLaudo(av, comps) {
 }
 
 export const SECOES_LAUDO = [
-  ["apresentacao", "Apresentação", ["completo", "ptam"]],
+  ["apresentacao", "Apresentação", ["completo"]],
   ["descricao", "Descrição do imóvel", ["cliente", "completo", "ptam"]],
   ["ocupacao", "Ocupação", ["cliente", "completo", "ptam"]],
   ["documentacao", "Situação documental", ["cliente", "completo", "ptam"]],
