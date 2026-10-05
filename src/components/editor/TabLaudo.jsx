@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import { ehApp } from "../../lib/nativo";
 import { mensagemErro } from "../../lib/versao";
 import { FileDown, Eye, Sparkles, RotateCcw, CheckCircle2, AlertTriangle, BadgeCheck, Paperclip, X } from "lucide-react";
 import { supabase } from "../../lib/supabase";
@@ -56,7 +57,10 @@ export default function TabLaudo({ f, set, comps, salvarAntes }) {
     try {
       const { baixarLaudo, gerarLaudoBlob } = await import("../../pdf/gerarLaudo");
       if (acao === "baixar") await baixarLaudo(av, comps, ptam ? anexos : []);
-      else {
+      else if (ehApp) {   // app: abre no leitor de PDF do celular
+        const { pdfNoAparelho } = await import("../../lib/nativo");
+        await pdfNoAparelho(await gerarLaudoBlob(av, comps, ptam ? anexos : []), `previa-${f.id}.pdf`, { abrir: true });
+      } else {
         const aba = window.open("", "_blank");
         const url = URL.createObjectURL(await gerarLaudoBlob(av, comps, ptam ? anexos : []));
         if (aba) aba.location.href = url; else window.location.href = url;

@@ -1,11 +1,13 @@
 import React from "react";
-import { NavLink, Link } from "react-router-dom";
-import { LogOut } from "lucide-react";
+import { NavLink, Link, useLocation } from "react-router-dom";
+import { LogOut, LayoutList, PlusCircle, BarChart3, Users, UserCircle } from "lucide-react";
 import { useAuth } from "../lib/auth";
 
 export default function Shell({ children }) {
   const { user, gestor, sair } = useAuth();
   const base = import.meta.env.BASE_URL;
+  const { pathname } = useLocation();
+  const noEditor = pathname.startsWith("/evaluation/");
   return (
     <>
       <header className="topo">
@@ -27,6 +29,16 @@ export default function Shell({ children }) {
         </div>
       </header>
       {children}
+      {/* barra inferior (celular / aplicativo); no editor, a barra é a das etapas */}
+      {!noEditor && (
+        <nav className="nav-inferior" aria-label="Navegação principal">
+          <NavLink to="/dashboard" end><LayoutList size={22} /><span>Avaliações</span></NavLink>
+          <Link to="/dashboard?nova=1" className="nova"><PlusCircle size={26} /><span>Nova</span></Link>
+          {gestor && <NavLink to="/painel"><BarChart3 size={22} /><span>Painel</span></NavLink>}
+          {gestor && <NavLink to="/equipe"><Users size={22} /><span>Equipe</span></NavLink>}
+          <NavLink to="/profile"><UserCircle size={22} /><span>Perfil</span></NavLink>
+        </nav>
+      )}
     </>
   );
 }

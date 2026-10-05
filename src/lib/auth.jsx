@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
+import { SITE_URL } from "./format";
 import { supabase, supabaseReady } from "./supabase";
 
 const AuthCtx = createContext(null);
@@ -43,7 +44,7 @@ export function AuthProvider({ children }) {
       supabase.auth.signUp({
         email: email.trim(), password: senha,
         // o link do e-mail de confirmação volta para o Avaliador, e não para o Site URL do projeto (Vistoria)
-        options: { data: { nome }, emailRedirectTo: `${window.location.origin}${import.meta.env.BASE_URL}` },
+        options: { data: { nome }, emailRedirectTo: SITE_URL },
       }),
     sair: () => supabase.auth.signOut(),
   };

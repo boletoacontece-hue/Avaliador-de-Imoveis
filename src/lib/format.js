@@ -40,8 +40,12 @@ export const media = (valores) => {
   return v.length ? v.reduce((s, x) => s + x, 0) / v.length : null;
 };
 
+// Endereço público do site. No aplicativo (Capacitor) a página roda em https://localhost,
+// então o link do cliente precisa vir da configuração (VITE_SITE_URL), não da página atual.
+export const SITE_URL = (import.meta.env.VITE_SITE_URL || `${window.location.origin}${import.meta.env.BASE_URL}`).replace(/\/?$/, "/");
+
 export function linkPublico(shortCode) {
-  return `${window.location.origin}${import.meta.env.BASE_URL}${shortCode}`;
+  return `${SITE_URL}${shortCode}`;
 }
 
 export function linkWhatsApp(phone, mensagem) {

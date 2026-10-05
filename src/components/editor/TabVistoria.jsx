@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
+import { ehApp, fotoDaCamera } from "../../lib/nativo";
 import { Camera, Images, Plus, Trash2, X, ShieldCheck } from "lucide-react";
 import { Campo } from "../ui";
 import { comprimirJpeg, enviarPrivado, linksTemporarios, removerPrivado } from "../../lib/privado";
@@ -133,13 +134,19 @@ export default function TabVistoria({ f, set, atual }) {
 function Ambiente({ amb, links, enviando, onRenomear, onEnviar, onLegenda, onRemoverFoto, onRemover }) {
   const camera = useRef(), galeria = useRef();
   const escolher = (ref) => ref.current?.click();
+  // no aplicativo, a câmera nativa (orientação corrigida); no navegador, o seletor com captura
+  async function usarCamera() {
+    if (!ehApp) return escolher(camera);
+    try { const foto = await fotoDaCamera(); if (foto) onEnviar([foto]); }
+    catch (e) { alert(e.message); }
+  }
   const aoEscolher = (e) => { const a = [...(e.target.files || [])]; e.target.value = ""; if (a.length) onEnviar(a); };
   return (
     <div className="ambiente">
       <div className="ambiente-topo">
         <input className="input ambiente-nome" value={amb.nome} onChange={(e) => onRenomear(e.target.value)} aria-label="Nome do ambiente" />
         <div style={{ display: "flex", gap: 6 }}>
-          <button type="button" className="btn btn-sec btn-sm" onClick={() => escolher(camera)}><Camera size={15} /> Câmera</button>
+          <button type="button" className="btn btn-sec btn-sm" onClick={usarCamera}><Camera size={15} /> Câmera</button>
           <button type="button" className="btn btn-sec btn-sm" onClick={() => escolher(galeria)}><Images size={15} /> Galeria</button>
           <button type="button" className="btn btn-ghost btn-sm" onClick={onRemover} aria-label="Remover ambiente"><Trash2 size={15} /></button>
         </div>

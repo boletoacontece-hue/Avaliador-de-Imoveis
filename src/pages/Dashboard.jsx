@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { Plus, Search, MapPin, FileSearch, Eye } from "lucide-react";
 import { supabase } from "../lib/supabase";
 import { useAuth } from "../lib/auth";
@@ -7,12 +7,16 @@ import { brl, dataCurta } from "../lib/format";
 import { Campo, Carregando, Modal } from "../components/ui";
 
 export default function Dashboard() {
+
   const { user } = useAuth();
   const nav = useNavigate();
   const [lista, setLista] = useState(null);
   const [erro, setErro] = useState("");
   const [busca, setBusca] = useState("");
   const [novo, setNovo] = useState(false);
+  // "Nova" da barra inferior do celular chega como ?nova=1
+  const [params, setParams] = useSearchParams();
+  useEffect(() => { if (params.get("nova")) { setNovo(true); setParams({}, { replace: true }); } }, [params]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     supabase.from("evaluations")

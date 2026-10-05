@@ -1,0 +1,84 @@
+# Gera o aplicativo Android (APK) a cada mudança no código, ou manualmente em Actions → Build APK → Run workflow.
+# Segredos usados (Settings → Secrets and variables → Actions):
+#   VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY       — os mesmos do site
+#   ANDROID_KEYSTORE_BASE64, ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_ALIAS, ANDROID_KEY_PASSWORD — chave fixa do app
+# Variável opcional: VITE_SITE_URL (endereço do site; padrão = GitHub Pages deste repositório)
+name: Build APK (Android)
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ["src/**", "public/**", "android/**", "package.json", "package-lock.json", "capacitor.config.json", "index.html", "vite.config.js", ".github/workflows/build-apk.yml"]
+
+concurrency:
+  group: build-apk
+  cancel-in-progress: true
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Instalar dependências
+        run: npm ci
+
+      - name: Build do sistema para o aplicativo
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+          VITE_BASE: /
+          VITE_SITE_URL: ${{ vars.VITE_SITE_URL || format('https://{0}.github.io/{1}/', github.repository_owner, github.event.repository.name) }}
+        run: npm run build
+
+      - name: Copiar o sistema para o projeto Android
+        run: npx cap sync android
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: gradle
+
+      - uses: android-actions/setup-android@v3
+
+      - name: Preparar a chave de assinatura
+        env:
+          KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        run: |
+          if [ -n "$KEYSTORE_B64" ]; then
+            echo "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/avaliador.keystore"
+            echo "ANDROID_KEYSTORE_PATH=$RUNNER_TEMP/avaliador.keystore" >> "$GITHUB_ENV"
+            echo "Chave fixa configurada: o APK atualiza por cima da versão instalada."
+          else
+            echo "::warning::Sem ANDROID_KEYSTORE_BASE64: APK assinado com chave temporária (para atualizar, será preciso desinstalar a versão anterior)."
+          fi
+
+      - name: Gerar o APK
+        working-directory: android
+        env:
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          chmod +x gradlew
+          if [ -n "$ANDROID_KEYSTORE_PATH" ]; then
+            ./gradlew assembleRelease --no-daemon --stacktrace
+            mv app/build/outputs/apk/release/app-release.apk "../Avaliador-Acontece-v1.0.${GITHUB_RUN_NUMBER}.apk"
+          else
+            # sem a chave fixa, gera a versão de teste (assinada com a chave temporária do runner)
+            ./gradlew assembleDebug --no-daemon --stacktrace
+            mv app/build/outputs/apk/debug/app-debug.apk "../Avaliador-Acontece-v1.0.${GITHUB_RUN_NUMBER}-teste.apk"
+          fi
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Avaliador-Acontece-APK
+          path: Avaliador-Acontece-v*.apk
+          retention-days: 30

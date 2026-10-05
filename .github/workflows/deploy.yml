@@ -4,6 +4,11 @@ name: Deploy GitHub Pages
 on:
   push:
     branches: [main]
+    # o coletor roda no computador do corretor: mudar só ele não republica o site
+    paths-ignore:
+      - "ferramentas/**"
+      - "android/**"
+      - "**.md"
   workflow_dispatch:
 
 permissions:

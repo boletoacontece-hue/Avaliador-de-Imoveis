@@ -48,8 +48,8 @@ export function TipoLaudo({ f, set }) {
         })}
       </div>
       {tipo === "ptam" && (
-        <p className="aviso aviso-ambar" style={{ marginTop: 12 }}>
-          A homogeneização das amostras e o checklist do PTAM chegam na próxima etapa. Por enquanto, preencha normalmente os dados do imóvel e as amostras.
+        <p className="dica" style={{ marginTop: 12 }}>
+          O PTAM pede ainda: vistoria com fotos (aba Vistoria), certidão de matrícula (Documentos), homogeneização (Fatores) e o Selo Certificador (Laudo). O checklist completo fica na aba Laudo.
         </p>
       )}
     </section>

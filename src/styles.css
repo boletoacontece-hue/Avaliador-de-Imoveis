@@ -455,3 +455,73 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .selo-previa img { max-width: 100%; max-height: 100%; object-fit: contain; }
 .interruptor-linha { display: flex; gap: 10px; align-items: flex-start; margin-top: 14px; cursor: pointer; }
 .interruptor-linha input { margin-top: 4px; }
+
+/* =====================================================================
+   Celular e aplicativo Android
+   ===================================================================== */
+.so-mobile, .rotulo-app, .etapas-mobile, .nav-inferior { display: none; }
+.nav-etapas { display: flex; justify-content: space-between; gap: 8px; margin-top: 24px; }
+
+.nav-inferior {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 60;
+  background: var(--verde-escuro); border-top: 1px solid rgba(255,255,255,.08);
+  padding: 6px 4px calc(6px + env(safe-area-inset-bottom, 0px));
+  justify-content: space-around; align-items: stretch;
+}
+.nav-inferior a { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px 2px; border-radius: 10px;
+  color: rgba(255,255,255,.72); text-decoration: none; font-size: 11px; font-weight: 500; min-height: 48px; justify-content: center; }
+.nav-inferior a.active { color: #fff; background: rgba(255,255,255,.08); }
+.nav-inferior a.active svg { color: var(--dourado); }
+.nav-inferior a.nova svg { color: var(--dourado); }
+
+.etapas-mobile {
+  width: 100%; margin: 14px 0 16px; padding: 12px 14px 16px; position: relative;
+  grid-template-columns: auto 1fr auto auto; align-items: center; gap: 10px;
+  background: var(--branco); border: 1px solid var(--linha); border-radius: var(--raio); font-family: inherit; text-align: left; cursor: pointer; color: var(--texto);
+}
+.etapas-mobile .et-num { font-family: var(--mono); font-size: 12.5px; color: var(--sub); }
+.etapas-mobile .et-nome { font-weight: 600; font-size: 16px; color: var(--verde-escuro); }
+.etapas-mobile .et-prog { font-size: 12px; color: var(--verde); background: var(--verde-claro); border-radius: 99px; padding: 2px 8px; font-family: var(--mono); }
+.etapas-mobile .et-barra { position: absolute; left: 14px; right: 14px; bottom: 6px; height: 3px; border-radius: 3px; background: var(--off); overflow: hidden; }
+.etapas-mobile .et-barra i { display: block; height: 100%; background: var(--verde); border-radius: 3px; transition: width .3s; }
+.folha-fundo { position: fixed; inset: 0; z-index: 80; background: rgba(20,30,20,.45); display: flex; align-items: flex-end; }
+.folha { width: 100%; max-height: 82vh; overflow: auto; background: var(--branco); border-radius: 18px 18px 0 0; padding: 14px 16px calc(16px + env(safe-area-inset-bottom, 0px)); animation: sobe .2s ease-out; }
+@keyframes sobe { from { transform: translateY(40px); opacity: .6; } to { transform: none; opacity: 1; } }
+.folha-topo { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+.folha-topo b { font-size: 17px; color: var(--verde-escuro); }
+.folha-item { width: 100%; display: flex; align-items: center; gap: 12px; padding: 13px 10px; border: 0; border-radius: 10px; background: none; font: inherit; font-size: 15px; text-align: left; color: var(--texto); cursor: pointer; }
+.folha-item.atual { background: var(--verde-claro); font-weight: 600; }
+.folha-item small { margin-left: auto; color: var(--sub); font-size: 12px; }
+.et-ok { color: var(--verde); } .et-parcial { color: #B7862B; } .et-vazio { color: #C9CFC4; }
+
+@media (max-width: 760px) {
+  .topo .nav, .topo .email { display: none; }
+  .nav-inferior { display: flex; }
+  body:has(.nav-inferior) { padding-bottom: calc(70px + env(safe-area-inset-bottom, 0px)); }
+  .abas { display: none; }
+  .etapas-mobile { display: grid; }
+  .so-mobile { display: inline-flex; }
+  .nav-etapas { position: sticky; bottom: 0; z-index: 20; margin: 24px -16px 0; padding: 10px 16px calc(10px + env(safe-area-inset-bottom, 0px));
+    background: rgba(247,245,242,.96); backdrop-filter: blur(6px); border-top: 1px solid var(--linha); }
+  .nav-etapas .btn { flex: 1; justify-content: center; }
+  .nav-etapas > span:empty { display: none; }
+  /* ações do topo do editor: ícone + rótulo, largura total */
+  .barra-editor .acoes { display: grid; grid-template-columns: repeat(5, 1fr); width: 100%; gap: 6px; }
+  .barra-editor .acoes > * { flex-direction: column; height: auto; min-height: 52px; padding: 6px 2px; gap: 3px; font-size: 11px; width: auto; justify-content: center; }
+  .barra-editor .acoes .rotulo-longo, .barra-editor .acoes .rotulo-app { display: inline !important; font-size: 11px; font-weight: 500; }
+  .barra-editor .acoes .interruptor { display: flex; align-items: center; border: 1px solid var(--linha); border-radius: var(--raio); background: var(--branco); }
+}
+
+/* alvos de toque confortáveis em telas de toque (Android e navegador do celular) */
+@media (pointer: coarse) {
+  .btn { min-height: 44px; }
+  .btn-sm { min-height: 40px; }
+  .btn-icone { min-width: 44px; }
+  .input, .select, .textarea { min-height: 44px; font-size: 16px; }
+  .select-mini { min-height: 40px; }
+  input[type="checkbox"] { width: 20px; height: 20px; }
+  .tabela td, .tabela th { padding-top: 10px; padding-bottom: 10px; }
+}
+
+/* aplicativo: área segura sob a barra de status do Android */
+.modo-app .topo { padding-top: env(safe-area-inset-top, 0px); }

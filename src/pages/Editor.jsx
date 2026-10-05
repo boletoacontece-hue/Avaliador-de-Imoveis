@@ -1,6 +1,8 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
+import EtapasMobile from "../components/editor/EtapasMobile";
+import { compartilhar } from "../lib/nativo";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Copy, ExternalLink, Save, Eye, CheckCircle2, AlertTriangle, Loader2 } from "lucide-react";
+import { ArrowLeft, Copy, ExternalLink, Save, Eye, CheckCircle2, AlertTriangle, Loader2, Share2 } from "lucide-react";
 import { supabase } from "../lib/supabase";
 import { enviarFoto as uploadFoto, removerFoto as apagarFoto } from "../lib/imagem";
 import { hora, linkPublico, montarEndereco } from "../lib/format";
@@ -206,6 +208,14 @@ export default function Editor() {
     avisar(novo ? "Link público ativado" : "Link público desativado");
   }
 
+  // envia o link pelo WhatsApp/e-mail (tela de compartilhamento do celular)
+  async function enviarLink() {
+    try {
+      const r = await compartilhar({ titulo: "Estudo de valor do imóvel", texto: `${f.client_name ? `${f.client_name}, segue` : "Segue"} o estudo de valor do imóvel:`, url: linkPublico(f.short_code) });
+      if (r === "copiado") avisar("Link copiado");
+    } catch { /* cancelado pelo usuário */ }
+  }
+
   async function copiarLink() {
     const url = linkPublico(f.short_code);
     try { await navigator.clipboard.writeText(url); avisar("Link copiado"); }
@@ -325,8 +335,9 @@ export default function Editor() {
               <input type="checkbox" checked={f.is_active} onChange={alternarAtivo} />
               <span className="trilho" /> <span className="rotulo-longo">{f.is_active ? "Ativo" : "Inativo"}</span>
             </label>
-            <a className="btn btn-sec btn-icone" href={linkPublico(f.short_code)} target="_blank" rel="noreferrer" aria-label="Abrir página do cliente" title="Abrir página do cliente"><ExternalLink size={17} /></a>
+            <a className="btn btn-sec btn-icone" href={linkPublico(f.short_code)} target="_blank" rel="noreferrer" aria-label="Abrir página do cliente" title="Abrir página do cliente"><ExternalLink size={17} /><span className="rotulo-app">Abrir</span></a>
             <button className="btn btn-sec" onClick={copiarLink}><Copy size={16} /><span className="rotulo-longo">Copiar link</span></button>
+            <button className="btn btn-sec so-mobile" onClick={enviarLink}><Share2 size={16} /><span className="rotulo-longo">Enviar</span></button>
             <button className="btn" onClick={() => salvarRef.current()} disabled={status.tipo === "salvando"}><Save size={16} /><span className="rotulo-longo">Salvar</span></button>
           </div>
         </div>
@@ -342,6 +353,7 @@ export default function Editor() {
         )}
         {status.tipo === "erro" && <div className="aviso aviso-ambar" style={{ marginTop: 16 }}>Não foi possível salvar: {status.msg}. Tentaremos de novo na próxima alteração, ou clique em Salvar.</div>}
 
+        <EtapasMobile abas={ABAS} aba={aba} setAba={setAba} f={f} comps={comps} />
         <div className="abas" role="tablist">
           {ABAS.map(([k, r]) => (
             <button key={k} role="tab" aria-selected={aba === k} onClick={() => setAba(k)}>
@@ -363,11 +375,11 @@ export default function Editor() {
         {aba === "mercado" && <TabMercado f={f} set={set} />}
         {aba === "valor" && <TabValor f={f} set={set} comps={comps} salvarAntes={() => salvarRef.current()} />}
 
-        <div style={{ display: "flex", justifyContent: "space-between", marginTop: 24, gap: 8 }}>
+        <div className="nav-etapas">
           {ABAS.findIndex(([k]) => k === aba) > 0
-            ? <button className="btn btn-sec" onClick={() => setAba(ABAS[ABAS.findIndex(([k]) => k === aba) - 1][0])}>Anterior</button> : <span />}
+            ? <button className="btn btn-sec" onClick={() => { setAba(ABAS[ABAS.findIndex(([k]) => k === aba) - 1][0]); window.scrollTo({ top: 0 }); }}>Anterior</button> : <span />}
           {ABAS.findIndex(([k]) => k === aba) < ABAS.length - 1
-            ? <button className="btn" onClick={() => setAba(ABAS[ABAS.findIndex(([k]) => k === aba) + 1][0])}>Próxima: {ABAS[ABAS.findIndex(([k]) => k === aba) + 1][1]}</button>
+            ? <button className="btn" onClick={() => { setAba(ABAS[ABAS.findIndex(([k]) => k === aba) + 1][0]); window.scrollTo({ top: 0 }); }}>Próxima: {ABAS[ABAS.findIndex(([k]) => k === aba) + 1][1]}</button>
             : <a className="btn" href={linkPublico(f.short_code)} target="_blank" rel="noreferrer">Ver como o cliente vê</a>}
         </div>
       </main>

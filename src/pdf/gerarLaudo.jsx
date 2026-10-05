@@ -75,6 +75,8 @@ export async function baixarLaudo(av, comps, anexos = []) {
   const blob = await gerarLaudoBlob(av, comps, anexos);
   const tipo = av.report_type === "cliente" ? "Laudo avaliativo" : av.report_type === "ptam" ? "PTAM" : "Avaliacao de imovel";
   const nome = nomeArquivo(`${tipo} - ${av.property_street || av.client_name || "imovel"} - ${new Date().toISOString().slice(0, 10)}`) + ".pdf";
+  const { ehApp, pdfNoAparelho } = await import("../lib/nativo");
+  if (ehApp) { await pdfNoAparelho(blob, nome); return nome; }   // app: salva e abre o compartilhamento (WhatsApp, e-mail…)
   const url = URL.createObjectURL(blob);
   const a = Object.assign(document.createElement("a"), { href: url, download: nome });
   document.body.appendChild(a); a.click(); a.remove();
