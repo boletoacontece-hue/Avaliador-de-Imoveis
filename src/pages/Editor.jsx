@@ -1,4 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
+import { publicarContexto, limparContexto } from "../lib/contextoAgente";
+import { statusEtapas } from "../components/editor/EtapasMobile";
+import { checklistPtam } from "../lib/ptam";
 import EtapasMobile from "../components/editor/EtapasMobile";
 import { compartilhar } from "../lib/nativo";
 import { useNavigate, useParams } from "react-router-dom";
@@ -27,7 +30,7 @@ const CAMPOS_EVAL = ["title", "client_name", "property_cep", "property_street", 
   // laudos (0003)
   "report_type", "property_code", "interested_party", "purpose", "occupancy", "current_rent", "area_total", "condo_fee",
   "iptu_value", "iptu_registration", "registry_number", "features", "market_value", "negotiation_min", "negotiation_max",
-  "target_days", "portal_study", "property_sheet", "tax_sheet", "report_texts", "homogenization", "registry_sheet", "inspection", "ptam"];
+  "target_days", "portal_study", "property_sheet", "tax_sheet", "report_texts", "homogenization", "registry_sheet", "inspection", "ptam", "market_scan"];
 const NUM_EVAL = new Set(["property_area", "property_bedrooms", "property_suites", "property_bathrooms", "property_parking",
   "property_floor", "property_latitude", "property_longitude", "suggested_value", "current_rent", "area_total", "condo_fee",
   "iptu_value", "market_value", "negotiation_min", "negotiation_max", "target_days"]);
@@ -183,6 +186,27 @@ export default function Editor() {
 
   // ---------- edição da avaliação ----------
   // atualiza a referência na hora (o salvamento pode rodar antes do próximo render)
+  // contexto para o agente da Acontece (sem nomes de cliente) e atalhos de aba vindos dele
+  useEffect(() => {
+    if (!f) return;
+    const st = statusEtapas(f, comps);
+    const faltaPtam = f.report_type === "ptam" ? checklistPtam(f, comps, {}).filter((i) => i.obrigatorio && !i.ok).map((i) => i.rotulo.replace(/\s*\(.*\)$/, "")) : [];
+    publicarContexto({
+      tela: "editor de avaliação", aba: ABAS.find(([k]) => k === aba)?.[1], abas: ABAS.map(([k, r]) => `${k}=${r}`).join(", "),
+      laudo: f.report_type, operacao: f.evaluation_type, imovel: [f.property_type, f.property_neighborhood, f.property_area && `${f.property_area} m²`, f.property_bedrooms && `${f.property_bedrooms} quartos`, f.property_parking != null && `${f.property_parking} vagas`].filter(Boolean).join(", "),
+      amostras: comps.filter((c) => c.price > 0 && c.area > 0).length, valor_mercado: f.market_value || null, valor_oferta: f.suggested_value || null,
+      etapas_prontas: Object.entries(st).filter(([k, v]) => !k.startsWith("_") && v === "ok").map(([k]) => k).join(", "),
+      documentos: [f.property_sheet && "ficha Imobiliar", f.tax_sheet?.historico && "pauta IPTU", f.tax_sheet?.cadastro && "cadastro GDF", f.registry_sheet && "certidão", f.portal_study && "estudo do portal"].filter(Boolean).join(", ") || "nenhum",
+      falta_ptam: faltaPtam.join("; "),
+    });
+  }, [f, comps, aba]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => () => limparContexto(), []);
+  useEffect(() => {
+    const ir = (e) => { if (ABAS.some(([k]) => k === e.detail)) { setAba(e.detail); window.scrollTo({ top: 0 }); } };
+    window.addEventListener("agente:aba", ir);
+    return () => window.removeEventListener("agente:aba", ir);
+  }, []);
+
   const setVarios = useCallback((obj) => {
     fRef.current = { ...fRef.current, ...obj };
     setF(fRef.current); sujo.current.eval = true; marcar();
@@ -366,8 +390,8 @@ export default function Editor() {
 
         {aba === "imovel" && <TabImovel f={f} set={set} setVarios={setVarios} />}
         {aba === "percepcoes" && <TabPercepcoes f={f} set={set} />}
-        {aba === "comparativos" && <TabComparativos f={f} comps={comps} vendidas={vendidas} acoes={acoes} />}
-        {aba === "ficha" && <><TabFicha f={f} set={set} setVarios={setVarios} /><SecaoIptu f={f} set={set} />
+        {aba === "comparativos" && <TabComparativos f={f} set={set} comps={comps} vendidas={vendidas} acoes={acoes} />}
+        {aba === "ficha" && <><TabFicha f={f} set={set} setVarios={setVarios} /><SecaoIptu f={f} set={set} setVarios={setVarios} />
           <SecaoCertidao f={f} set={set} setVarios={setVarios} salvarAntes={() => salvarRef.current()} /></>}
         {aba === "laudo" && <TabLaudo f={f} set={set} comps={comps} salvarAntes={() => salvarRef.current()} />}
         {aba === "fatores" && <TabFatores f={f} set={set} comps={comps} />}

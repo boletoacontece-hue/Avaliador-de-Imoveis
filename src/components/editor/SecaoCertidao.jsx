@@ -187,22 +187,26 @@ export default function SecaoCertidao({ f, set, setVarios, salvarAntes }) {
 
 // ------------------------------------------------------------ conferência documental
 function ConsolidacaoDocumental({ f }) {
-  const ficha = f.property_sheet, iptu = f.tax_sheet, cert = f.registry_sheet;
-  const fontes = [ficha && "ficha", iptu && "IPTU", cert && "certidão"].filter(Boolean);
+  const ficha = f.property_sheet, iptu = f.tax_sheet, cert = f.registry_sheet, cad = f.tax_sheet?.cadastro;
+  const fontes = [ficha && "ficha", iptu?.historico?.length && "IPTU", cad && "cadastro GDF", cert && "certidão"].filter(Boolean);
   if (fontes.length < 2) return null;
 
   const linhas = [];
   const cmpNum = (a, b, tol) => (a == null || b == null ? null : Math.abs(a - b) <= tol);
   // matrícula
-  if (cert?.matricula) {
-    const aval = f.registry_number;
-    linhas.push(["Matrícula", ficha?.matricula || "—", "—", cert.matricula, aval ? soDig(aval) === soDig(cert.matricula) : null,
-      aval && soDig(aval) !== soDig(cert.matricula) ? `A avaliação usa ${aval}.` : null]);
+  if (cert?.matricula || cad?.matricula) {
+    const refs = [ficha?.matricula, cad?.matricula, cert?.matricula].filter(Boolean).map(soDig);
+    const ok = refs.length >= 2 ? new Set(refs).size === 1 : null;
+    linhas.push(["Matrícula", ficha?.matricula || "—", cad?.matricula ? `${cad.matricula} (cadastro)` : "—", cert?.matricula || "—", ok,
+      ok === false ? "A matrícula não é a mesma em todos os documentos." : null]);
   }
   // inscrição do IPTU
-  if (iptu?.inscricao) {
+  const inscGdf = iptu?.inscricao || cad?.inscricao;
+  if (inscGdf) {
     const ref = ficha?.inscricao_iptu || cert?.imovel?.inscricao_iptu;
-    linhas.push(["Inscrição do IPTU", ficha?.inscricao_iptu || "—", iptu.inscricao, cert?.imovel?.inscricao_iptu || "—", ref ? soDig(ref) === soDig(iptu.inscricao) : null, null]);
+    const divergeGdf = iptu?.inscricao && cad?.inscricao && soDig(iptu.inscricao) !== soDig(cad.inscricao);
+    linhas.push(["Inscrição do IPTU", ficha?.inscricao_iptu || "—", divergeGdf ? `${iptu.inscricao} (pauta) × ${cad.inscricao} (cadastro)` : inscGdf, cert?.imovel?.inscricao_iptu || "—",
+      divergeGdf ? false : ref ? soDig(ref) === soDig(inscGdf) : null, divergeGdf ? "A pauta e o cadastro são de inscrições diferentes: confira se são do mesmo imóvel." : null]);
   }
   // área privativa
   const aFicha = ficha?.area_privativa, aCert = cert?.imovel?.area_privativa;
@@ -216,7 +220,7 @@ function ConsolidacaoDocumental({ f }) {
   if (tFicha != null || tCert != null) linhas.push(["Área total (m²)", tFicha != null ? num(tFicha) : "—", "—", tCert != null ? num(tCert) : "—", cmpNum(tFicha, tCert, 0.1), null]);
   // endereço (unidade/bloco/quadra)
   const chaves = (s) => { const t = String(s || "").toUpperCase(); return { q: (t.match(/(?:CLSW|SW|SQSW|SHCSW\s*CL\s*SW|CLS|SQS|CLN|SQN)\s*-?\s*(\d{3})/) || [])[1], u: (t.match(/\b(?:KIT|KS|SALA|APTO?|LOJA|UNIDADE)\.?\s*(?:ST[UÚ]DIO\s*)?(?:N[ºO°.]?\s*)?(\d{2,4})\b/) || [])[1] }; };
-  const eFicha = ficha?.endereco_ficha, eIptu = iptu?.endereco_fiscal, eCert = cert?.imovel?.denominacao_atual || cert?.imovel?.endereco || cert?.imovel?.descricao;
+  const eFicha = ficha?.endereco_ficha, eIptu = iptu?.endereco_fiscal || cad?.endereco_fiscal, eCert = cert?.imovel?.denominacao_atual || cert?.imovel?.endereco || cert?.imovel?.descricao;
   if ([eFicha, eIptu, eCert].filter(Boolean).length >= 2) {
     const ks = [eFicha, eIptu, eCert].filter(Boolean).map(chaves);
     const qs = new Set(ks.map((k) => k.q).filter(Boolean)), us = new Set(ks.map((k) => k.u).filter(Boolean));
@@ -238,7 +242,7 @@ function ConsolidacaoDocumental({ f }) {
       <p className="dica">Cruza {fontes.join(", ")}. {divergencias ? `${divergencias} ${divergencias === 1 ? "divergência encontrada" : "divergências encontradas"}.` : "Nenhuma divergência nos dados comparáveis."}</p>
       <div className="rolagem-x">
         <table className="tabela tabela-consolidacao">
-          <thead><tr><th>Dado</th><th>Ficha Imobiliar</th><th>IPTU (Receita DF)</th><th>Certidão</th><th>Situação</th></tr></thead>
+          <thead><tr><th>Dado</th><th>Ficha Imobiliar</th><th>IPTU / cadastro GDF</th><th>Certidão</th><th>Situação</th></tr></thead>
           <tbody>
             {linhas.map(([rot, a, b, c, ok, nota]) => (
               <tr key={rot}>

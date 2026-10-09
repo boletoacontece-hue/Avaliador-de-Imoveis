@@ -2,6 +2,7 @@ import React from "react";
 import { NavLink, Link, useLocation } from "react-router-dom";
 import { LogOut, LayoutList, PlusCircle, BarChart3, Users, UserCircle } from "lucide-react";
 import { useAuth } from "../lib/auth";
+import AssistenteAcontece from "./AssistenteAcontece";
 
 export default function Shell({ children }) {
   const { user, gestor, sair } = useAuth();
@@ -29,6 +30,7 @@ export default function Shell({ children }) {
         </div>
       </header>
       {children}
+      <AssistenteAcontece />
       {/* barra inferior (celular / aplicativo); no editor, a barra é a das etapas */}
       {!noEditor && (
         <nav className="nav-inferior" aria-label="Navegação principal">

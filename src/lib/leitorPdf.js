@@ -473,3 +473,65 @@ export function adicionarFicha(ps, nova) {
   fontes.push({ formato: nova.formato, emitida_em: nova.emitida_em, codigo: nova.codigo, importado_em: new Date().toISOString(), dados });
   return mesclarFichas(fontes, ps?.edicoes || {});
 }
+
+// ------------------------------------------------------------ Ficha de Cadastro Imobiliário (GDF)
+// Formato "rótulo em cima, valor embaixo" na mesma coluna. Lê inscrição, endereço fiscal, natureza,
+// habite-se, título e registro (matrícula). Blocos "Responsável" e "Proprietários" (nome/CPF) NUNCA são lidos.
+function abaixo(itens, reRotulo, { naLinhaDe, valida } = {}) {
+  let rotulos = itens.filter((i) => reRotulo.test(rotulo(i.s)));
+  if (naLinhaDe) rotulos = rotulos.filter((r) => itens.some((o) => o.p === r.p && Math.abs(o.y - r.y) <= 3 && naLinhaDe.test(rotulo(o.s))));
+  for (const r of rotulos) {
+    const cands = itens.filter((i) => i.p === r.p && i.y < r.y - 2 && i.y > r.y - 15 && Math.abs(i.x - r.x) <= 18 && !/:\s*$/.test(i.s))
+      .filter((i) => !valida || valida(i.s))
+      .sort((a, b) => Math.abs(a.x - r.x) - Math.abs(b.x - r.x));
+    if (cands.length) return cands[0].s;
+  }
+  return null;
+}
+
+export function lerFichaCadastroGdf(itens) {
+  const tudo = itens.map((i) => i.s).join(" ");
+  if (!/ficha de cadastro imobili/i.test(tudo)) throw new Error("Este PDF não parece a Ficha de Cadastro Imobiliário do GDF.");
+  // zona proibida: do rótulo "CPF/CNPJ Responsável" para baixo (responsável e proprietários)
+  const corte = itens.find((i) => /^cpf\/cnpj respons/i.test(semAcento(i.s)));
+  const base = corte ? itens.filter((i) => i.p !== corte.p || i.y > corte.y + 2) : itens;
+  const v = (re, opc) => abaixo(base, re, opc);
+  const c = { fonte: "GDF · Ficha de Cadastro Imobiliário" };
+  c.inscricao = v(/^inscricao$/, { valida: (s) => /^\d{5,}$/.test(s) });
+  c.situacao = v(/^situacao do imovel$/);
+  c.emitida_em = data(v(/^data de emissao$/));
+  c.endereco_fiscal = v(/^endereco do imovel$/);
+  c.localidade = v(/^localidade do imovel$/);
+  const cep = v(/^cep do imovel$/, { valida: (s) => /^\d{5}-?\d{3}$/.test(s) });   // há dois "CEP do Imóvel"; só um traz o número
+  c.cep = cep ? cep.replace(/^(\d{5})-?(\d{3})$/, "$1-$2") : null;
+  c.classificacao = v(/^ct$/);
+  c.natureza = v(/^natureza do imovel$/);
+  c.area_terreno = numeroBr(v(/^area terreno$/, { valida: (s) => /^[\d.,]+$/.test(s) }));
+  c.fracao_ideal = numeroBr(v(/^fracao ideal$/, { valida: (s) => /^[\d.,]+$/.test(s) }));
+  c.habite_se_numero = v(/^n\.? do habite-se$/, { valida: (s) => /^\d+$/.test(s) });
+  c.habite_se_area = numeroBr(v(/^area do habite-se$/, { valida: (s) => /^[\d.,]+$/.test(s) }));
+  c.habite_se_data = data(v(/^data do habite-se$/));
+  c.alvara_numero = v(/^n\.? do alvara$/, { valida: (s) => /^\d+$/.test(s) });
+  c.cartorio_notas = v(/^cartorio de oficio de notas$/);
+  c.titulo = v(/^titulo$/, { naLinhaDe: /^livro$/ });
+  c.titulo_data = data(v(/^data$/, { naLinhaDe: /^livro$/ }));
+  c.titulo_livro = v(/^livro$/, { valida: (s) => /^\d+$/.test(s) });
+  c.titulo_folha = v(/^folha$/, { valida: (s) => /^\d+$/.test(s) });
+  c.cartorio_registro = v(/^cartorio de registro de imoveis$/);
+  c.registro_data = data(v(/^data$/, { naLinhaDe: /^matricula$/ }));
+  c.matricula = v(/^matricula$/, { valida: (s) => /^[\d.]+$/.test(s) });
+  c.averbacao = v(/^averbacao$/, { valida: (s) => /^[A-Z]{1,3}[-\s]?\d+$/i.test(s) });
+  c.kt = numeroBr(v(/^kt$/, { valida: (s) => /^[\d.,]+$/.test(s) }));
+  c.kc = numeroBr(v(/^kc$/, { valida: (s) => /^[\d.,]+$/.test(s) }));
+  for (const k of Object.keys(c)) if (c[k] == null || c[k] === "") delete c[k];
+  if (!c.inscricao && !c.endereco_fiscal) throw new Error("Não encontrei os dados do imóvel na ficha de cadastro.");
+  return c;
+}
+
+/** Documento do IPTU/cadastro do GDF: identifica o tipo e lê. */
+export function lerDocumentoGdf(itens) {
+  const tudo = itens.map((i) => i.s).join(" ");
+  if (/ficha de cadastro imobili/i.test(tudo)) return { tipo: "cadastro", dados: lerFichaCadastroGdf(itens) };
+  if (/pauta iptu\/tlp/i.test(tudo)) return { tipo: "pauta", dados: lerFichaIptu(itens) };
+  throw new Error("Este PDF não é a Pauta IPTU/TLP nem a Ficha de Cadastro Imobiliário do GDF.");
+}

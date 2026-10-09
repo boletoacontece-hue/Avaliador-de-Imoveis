@@ -1,5 +1,6 @@
 import React, { useRef, useState } from "react";
-import { Plus, FileJson, GripVertical, Trash2, Search, ExternalLink } from "lucide-react";
+import { BuscaAmostrasIA, AnaliseMercadoIA } from "./BuscaAmostrasIA";
+import { Plus, FileJson, GripVertical, Trash2, Search, ExternalLink, Sparkles } from "lucide-react";
 import { DndContext, closestCenter, PointerSensor, KeyboardSensor, TouchSensor, useSensor, useSensors } from "@dnd-kit/core";
 import { SortableContext, useSortable, verticalListSortingStrategy, arrayMove, sortableKeyboardCoordinates } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
@@ -79,8 +80,9 @@ function CardComparativo({ c, n, tipo, cidade, uf, onAlterar, onFoto, onRemoverF
   );
 }
 
-export default function TabComparativos({ f, comps, vendidas, acoes }) {
+export default function TabComparativos({ f, set, comps, vendidas, acoes }) {
   const [importacao, setImportacao] = useState(null);
+  const [buscaIA, setBuscaIA] = useState(false);
   const [erroImport, setErroImport] = useState("");
   const arquivoJson = useRef(null);
   const sensores = useSensors(
@@ -117,6 +119,7 @@ export default function TabComparativos({ f, comps, vendidas, acoes }) {
             <p className="dica" style={{ margin: 0 }}>Imóveis semelhantes anunciados na região. Arraste pela alça para mudar a ordem.</p>
           </div>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            <button type="button" className="btn btn-ia" onClick={() => setBuscaIA(true)}><Sparkles size={17} /> Buscar amostras com IA</button>
             <button type="button" className="btn btn-sec" onClick={() => arquivoJson.current?.click()}><FileJson size={17} /> Importar JSON/CSV</button>
             <button type="button" className="btn" onClick={acoes.adicionar}><Plus size={17} /> Adicionar amostra</button>
             <input ref={arquivoJson} type="file" accept=".json,.csv,application/json,text/csv" hidden onChange={lerArquivo} />
@@ -173,6 +176,17 @@ export default function TabComparativos({ f, comps, vendidas, acoes }) {
           <FotoSlot url={null} rotulo="Adicionar print" onEnviar={acoes.adicionarVendida} />
         </div>
       </section>
+
+      <AnaliseMercadoIA scan={f.market_scan} onNovaBusca={() => setBuscaIA(true)} />
+
+      {buscaIA && (
+        <BuscaAmostrasIA f={f} onFechar={() => setBuscaIA(false)} onResultado={(dados, filtros) => {
+          const { amostras, ...resto } = dados;
+          set("market_scan", { ...resto, filtros, geradoEm: resto.geradoEm || new Date().toISOString() });   // análise guardada (uso interno)
+          setBuscaIA(false);
+          setImportacao(lerComparativos(JSON.stringify(amostras), "Busca inteligente (IA)", comps.map((c) => c.source_url)));
+        }} />
+      )}
 
       {importacao && (
         <SelecaoImportacao importacao={importacao} tipo={tipo} onFechar={() => setImportacao(null)}

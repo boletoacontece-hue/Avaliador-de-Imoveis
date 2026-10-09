@@ -24,6 +24,8 @@ export const SECOES_LAUDO = [
   ["comercial", "Mensagem final", ["completo"]],
 ];
 
+// "01 - 1 OFICIO DE REGISTRO DE IMOVEIS" (grafia do GDF) → "1º Ofício de Registro de Imóveis do DF"
+const cartorioRegistro = (s) => { const n = String(s).match(/(\d+)\s*o?\s*oficio/i); return n ? `${Number(n[1])}º Ofício de Registro de Imóveis do DF` : s; };
 const pct = (v) => `${Number(v).toFixed(2).replace(".", ",")}%`;
 const m2Txt = (v) => (v ? `R$ ${num(Math.round(v))}/m²` : null);
 const frase = (s) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : s);
@@ -89,7 +91,14 @@ export function textosPadrao(av, comps = []) {
       documentacao += ` A certidão${cert.emitida_em ? ` emitida em ${cert.emitida_em}` : ""} aponta ${vigentes.length === 1 ? "o seguinte ônus vigente" : "os seguintes ônus vigentes"}: ${lista(vigentes.map((o) => `${o.tipo}${o.ato ? ` (${o.ato})` : ""}`))}, que ${vigentes.length === 1 ? "deverá ser baixado" : "deverão ser baixados"} ou equacionado${vigentes.length === 1 ? "" : "s"} na negociação.`;
     }
   }
-  if (iptu.inscricao) documentacao += `${documentacao ? " " : ""}Inscrição imobiliária no IPTU nº ${iptu.inscricao}.`;
+  // sem certidão, a matrícula do cadastro imobiliário do GDF identifica o registro
+  const cad = iptu.cadastro;
+  if (!cert?.matricula && cad?.matricula)
+    documentacao += `${documentacao ? " " : ""}Conforme o cadastro imobiliário do GDF, o imóvel está registrado sob a matrícula nº ${cad.matricula}${cad.cartorio_registro ? ` do ${cartorioRegistro(cad.cartorio_registro)}` : ""}.`;
+  if (cad?.habite_se_numero)
+    documentacao += ` Habite-se nº ${cad.habite_se_numero}${cad.habite_se_data ? `, de ${cad.habite_se_data}` : ""}${cad.habite_se_area ? `, com área de ${num(cad.habite_se_area)} m²` : ""}.`;
+  const insc = iptu.inscricao || cad?.inscricao;
+  if (insc) documentacao += `${documentacao ? " " : ""}Inscrição imobiliária no IPTU nº ${insc}.`;
 
   // ---- parâmetros
   const partesParam = [];

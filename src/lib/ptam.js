@@ -26,7 +26,7 @@ export function checklistPtam(av, comps, extra = {}) {
     { ok: !!av.interested_party?.trim(), rotulo: "Solicitante", onde: "aba Imóvel → Dados do laudo (Interessado)" },
     { ok: !!(av.purpose?.trim() || av.evaluation_type), rotulo: "Finalidade / objetivo", onde: "aba Imóvel → Dados do laudo" },
     { ok: !!av.property_street && av.property_area > 0, rotulo: "Identificação, endereço e área do imóvel", onde: "aba Imóvel" },
-    { ok: !!(cert?.matricula || av.registry_number), rotulo: "Matrícula e cartório", onde: "aba Documentos → certidão" },
+    { ok: !!(cert?.matricula || av.registry_number || av.tax_sheet?.cadastro?.matricula), rotulo: "Matrícula e cartório", onde: "aba Documentos → certidão ou cadastro do GDF" },
     { ok: !!av.inspection?.data, rotulo: "Data da vistoria", onde: "aba Vistoria" },
     { ok: fotos > 0, rotulo: `Relatório fotográfico (${fotos} ${fotos === 1 ? "foto" : "fotos"})`, onde: "aba Vistoria" },
     { ok: amostrasComFonte >= 3, rotulo: `Amostras com fonte identificada (${amostrasComFonte}; mínimo 3)`, onde: "aba Comparativos" },
